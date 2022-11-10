@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://d3js.org/topojson.v3.min.js"></script>
+  <style>
+    .polygon {
+      fill: #daedf4;
+    }
+
+    .outline {
+      stroke: black;
+      stroke-width: 2px;
+      fill: none;
+    }
+
+    /* .gridlines line {
+      stroke: #bbb;
+    }
+
+    .gridlines .domain {
+      stroke: none;
+    } */
+  </style>
+</head>
+
+<body>
+  <h1>Project 2</h1>
+  <h2>INSERT TITLE HERE</h2>
+  <svg id="NewYorkMap" height="800" width="800" style="margin: 20px"></svg>
+  <ul id="list"></ul>
+  <script>
+    const map = d3.select("svg#NewYorkMap");
+    const width = map.attr("width");
+    const height = map.attr("height");
+    const margin = { top: 10, right: 10, bottom: 50, left: 50 };
+    const mapWidth = width - margin.left - margin.right;
+    const mapHeight = height - margin.top - margin.bottom;
+    const annotations = map.append("g").attr("id", "annotations");
+    const mapArea = map
+      .append("g")
+      .attr("id", "points")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const requestData = async function () {
+      const NewYork = await d3.json("Borough Boundaries.geojson");
+      console.log(NewYork);
+
+      const mapProjection = d3
+        .geoMercator()
+        .fitSize([mapWidth, mapHeight], NewYork);
+      const path = d3.geoPath().projection(mapProjection);
+
+      let wholeMap = mapArea
+        .selectAll("path.polygon")
+        .data(NewYork.features)
+        .join("path")
+        .attr("class", "polygon")
+        .attr("d", path)
+
+    };
+    requestData();
+  </script>
+</body>
+
+</html>
