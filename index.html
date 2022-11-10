@@ -62,8 +62,10 @@
                               .attr("stroke","steelblue")
 
         //load incident to date data
-        const incidentToDate = await d3.csv("NYPD_Shooting_Incident_Data__Year_To_Date_.csv");
-        console.log(incidentToDate);
+        //const incidenttoDate = await d3.csv("NYPD_Shooting_Incident_Data__Year_To_Date_.csv");
+        const incidentHistory = await d3.csv("NYPD_Shooting_Incident_Data__Historic_.csv");
+
+        //console.log(incidentHistory);
 
         //create age group color and scale
         const ageColors = ['#ee8070','#ffd438','#df65b0','#c51a72','#8d0c22']
@@ -72,21 +74,21 @@
                                   .range(ageColors);
         
         //split the dataset into female vics and male vics
-        let femaleIncidentToDate = [];
-        let maleIncidentToDate = [];
+        let femaleincidentHistory = [];
+        let maleincidentHistory = [];
 
-        incidentToDate.forEach(d=>{
+        incidentHistory.forEach(d=>{
             if( d.Latitude.length >0 && d.Longitude.length >0 ){
               d.incidentDot = mapProjection([d.Longitude,d.Latitude]);
               if(d.VIC_SEX == "F")
-                femaleIncidentToDate.push(d);
+                femaleincidentHistory.push(d);
               if(d.VIC_SEX == "M")
-                maleIncidentToDate.push(d);
+                maleincidentHistory.push(d);
             }
         })
 
         // draw circle for female victs
-        let femaleVic = mapArea.selectAll("circle").data(femaleIncidentToDate)
+        let femaleVic = mapArea.selectAll("circle").data(femaleincidentHistory)
                               .join("circle")
                               .attr("class","incident-female")
                               .attr("cx",d=> d.incidentDot[0]+jitter())
@@ -96,7 +98,7 @@
                               .attr("opacity",0.5)
               
         // draw triangle for for male victs
-        let maleVic =  mapArea.selectAll("rect").data(maleIncidentToDate)
+        let maleVic =  mapArea.selectAll("rect").data(maleincidentHistory)
                               .join("rect")
                               .attr("class","incident-male")
                               .attr("x",d=> d.incidentDot[0]+jitter())
@@ -137,9 +139,11 @@
 
         function setLabelText(d,x,y){
           label1.text("Victim age: " + d.VIC_AGE_GROUP)
-          let location = d.LOC_CLASSFCTN_DESC =="(null)"? "/" : d.LOC_CLASSFCTN_DESC .toLowerCase();
-          label2.text("Location: " + location)
-          boxWidth = (d.LOC_CLASSFCTN_DESC).length*20;
+          let vicRace = d.VIC_RACE == null? "/" : d.VIC_RACE;
+          label2.text("Victim race: " + vicRace)
+          console.log(vicRace.length)
+          let len = vicRace.length > 8? vicRace.length:8
+          boxWidth = len*20;
 
           let offsetY = y<50? 100:0
           let offsetX = x>750 ? -50:0
