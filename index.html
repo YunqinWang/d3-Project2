@@ -20,20 +20,16 @@
       fill: none;
     }
 
-    /* .gridlines line {
-      stroke: #bbb;
+    #label{
+        font-size: 16px;
     }
-
-    .gridlines .domain {
-      stroke: none;
-    } */
   </style>
 </head>
 
 <body>
   <div class = "container">
     <h1>Project 2</h1>
-    <h2>New York City Crime Distribution</h2>
+    <h2>New York City Incident Distribution</h2>
     <svg id="NewYorkMap" height="800" width="800" style="margin: 20px"></svg>
     <ul id="list"></ul>
     <script>
@@ -50,20 +46,177 @@
         .attr("transform", `translate(${margin.left},${margin.top})`);
   
       const requestData = async function () {
+        //load map data
         const NewYork = await d3.json("Borough Boundaries.geojson");
-        console.log(NewYork);
   
         const mapProjection = d3.geoMercator()
                                 .fitSize([mapWidth, mapHeight], NewYork);
         const path = d3.geoPath().projection(mapProjection);
        
-  
+        //base map
         let wholeMap = mapArea.selectAll("path.polygon")
                               .data(NewYork.features)
                               .join("path")
                               .attr("class", "polygon")
                               .attr("d", path)
                               .attr("stroke","steelblue")
+
+        //load incident to date data
+        const incidentToDate = await d3.csv("NYPD_Shooting_Incident_Data__Year_To_Date_.csv");
+        console.log(incidentToDate);
+
+        //create age group color and scale
+        const ageColors = ['#ee8070','#ffd438','#df65b0','#c51a72','#8d0c22']
+        const ageColorScale = d3.scaleOrdinal()
+                                  .domain(["0","18","25","45","65"])
+                                  .range(ageColors);
+        
+        //split the dataset into female vics and male vics
+        let femaleIncidentToDate = [];
+        let maleIncidentToDate = [];
+
+        incidentToDate.forEach(d=>{
+            if( d.Latitude.length >0 && d.Longitude.length >0 ){
+              d.incidentDot = mapProjection([d.Longitude,d.Latitude]);
+              if(d.VIC_SEX == "F")
+                femaleIncidentToDate.push(d);
+              if(d.VIC_SEX == "M")
+                maleIncidentToDate.push(d);
+            }
+        })
+
+        // draw circle for female victs
+        let femaleVic = mapArea.selectAll("circle").data(femaleIncidentToDate)
+                              .join("circle")
+                              .attr("class","incident-female")
+                              .attr("cx",d=> d.incidentDot[0]+jitter())
+                              .attr("cy",d=> d.incidentDot[1]+jitter())
+                              .attr("r",4)
+                              .style("fill",d=>ageColorScale(d=>formatAgeGroup(d.VIC_AGE_GROUP)))
+                              .attr("opacity",0.5)
+              
+        // draw triangle for for male victs
+        let maleVic =  mapArea.selectAll("rect").data(maleIncidentToDate)
+                              .join("rect")
+                              .attr("class","incident-male")
+                              .attr("x",d=> d.incidentDot[0]+jitter())
+                              .attr("y",d=> d.incidentDot[1]+jitter())
+                              .attr("width",5)
+                              .attr("height",5)
+                              .style("fill",d=>ageColorScale(d=>formatAgeGroup(d.VIC_AGE_GROUP)))
+                              .attr("opacity",0.5)    
+        
+        
+
+        //create tooltip for hovering
+        let layerText = map.append("g").attr("id","textBox");
+        let labelBox = layerText.append("rect")
+                                .attr("id","label-box")
+                                .attr("height",50)
+                                .style("fill","#000")
+                                .style("opacity",0)
+                                
+        let label1 = layerText.append("text")
+                            .attr("id","label")
+                            .style("fill","#fff")
+                            .attr("text-anchor","middle")
+                            .attr("alignment-baseline","middle");
+        let label2 = layerText.append("text")
+                            .attr("id","label")
+                            .style("fill","#fff")
+                            .attr("text-anchor","middle")
+                            .attr("alignment-baseline","middle");
+        let boxHeight=0;
+        let boxWidth=0;
+
+        femaleVic.on("mouseover", hoverFemaleVictim);
+        femaleVic.on("mouseout", leaveFemaleVictim);
+
+        maleVic.on("mouseover", hoverMaleVictim);
+        maleVic.on("mouseout", leaveMaleVictim);
+
+        function setLabelText(d,x,y){
+          label1.text("Victim age: " + d.VIC_AGE_GROUP)
+          let location = d.LOC_CLASSFCTN_DESC =="(null)"? "/" : d.LOC_CLASSFCTN_DESC .toLowerCase();
+          label2.text("Location: " + location)
+          boxWidth = (d.LOC_CLASSFCTN_DESC).length*20;
+
+          let offsetY = y<50? 100:0
+          let offsetX = x>750 ? -50:0
+
+          label1.attr("x",x+offsetX).attr("y",y-27+offsetY);
+          label2.attr("x",x+offsetX).attr("y",y-10+offsetY);
+
+          
+          labelBox.attr("x",x-boxWidth/2.0+offsetX).attr("y",y-30-15+offsetY)
+                  .attr("width",boxWidth)
+                  .style("opacity",0.5)
+        }
+
+        function clearTooptip(){
+          labelBox.style("opacity",0);
+          label1.text("");
+          label2.text("");
+        }
+
+        
+        function hoverFemaleVictim(event, d){   
+          let x= Number(d3.select(this)
+                      .attr('cx'))+50
+          let y= Number(d3.select(this)
+                      .attr('cy'))
+
+         setLabelText(d,x,y);
+                  
+          d3.select(this)
+              .transition().duration(200)
+              .attr("opacity",1)
+              .attr("r",12)    
+        }
+
+        function leaveFemaleVictim(event, d){ 
+          clearTooptip()
+          d3.select(this)
+              .transition().duration(200)
+              .attr("opacity",0.5)
+              .attr("r",4)  
+        }
+
+        function hoverMaleVictim(event, d){   
+          let x= Number(d3.select(this)
+                      .attr('x'))+50
+          let y= Number(d3.select(this)
+                      .attr('y'))
+
+         setLabelText(d,x,y);
+                  
+         d3.select(this)
+            .transition().duration(200)
+            .attr("opacity",1)
+            .attr("width",16)
+            .attr("height",16)
+        }
+
+        function leaveMaleVictim(event, d){ 
+          clearTooptip()
+          d3.select(this)
+              .transition().duration(200)
+              .attr("opacity",0.5)
+              .attr("width",5)
+              .attr("height",5) 
+        }
+          
+
+        function jitter(){
+            return Math.random()*8-4;
+        }
+
+        function formatAgeGroup(age){
+          console.log(age);
+          if(age.charAt(0)=="<")
+            return 0;
+          return Number(age.substring(0,2));
+        }
   
       };
       requestData();
