@@ -1,460 +1,530 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <script src="https://unpkg.com/d3-simple-slider"></script>
 
-<head>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="https://d3js.org/topojson.v3.min.js"></script>
-  <script src="https://unpkg.com/d3-simple-slider"></script>
+    <title>Info5100 Project2</title>
+    <style>
+      .container {
+        width: 75%;
+        margin: auto;
+      }
 
-  <title>Info5100 Project2</title>
-  <style>
-    .container {
-      width: 75%;
-      margin: auto;
-    }
+      .map {
+        display: flex;
+        align-items: flex-end;
+      }
 
-    .map {
-      display: flex;
-      align-items: flex-end;
-    }
+      .map div {
+        flex-grow: 1;
+      }
 
-    .map div {
-      flex-grow: 1;
-    }
+      .polygon {
+        fill: #f7f7f7;
+      }
 
-    .polygon {
-      fill: #f7f7f7;
-    }
+      .outline {
+        stroke: black;
+        stroke-width: 2px;
+        fill: none;
+      }
 
-    .outline {
-      stroke: black;
-      stroke-width: 2px;
-      fill: none;
-    }
+      #label {
+        font-size: 16px;
+      }
 
-    #label {
-      font-size: 16px;
-    }
+      .info {
+        margin-bottom: 20px;
+      }
 
-    .info {
-      margin-bottom: 20px;
-    }
+      .info div {
+        display: flex;
+        width: 100%;
+        height: 50px;
+      }
 
-    .info div {
-      display: flex;
-      width: 100%;
-      height: 50px;
-    }
+      .info h6 {
+        margin: 5px 0;
+      }
 
-    .info h6 {
-      margin: 5px 0;
-    }
+      .info p {
+        font-size: 16px;
+        margin: 5px 0px 5px 10px;
+      }
 
-    .info p {
-      font-size: 16px;
-      margin: 5px 0px 5px 10px;
-    }
+      .legend {
+        display: flex;
+      }
+    </style>
+  </head>
 
-    .legend {
-      display: flex;
-    }
-  </style>
-</head>
+  <body>
+    <div class="container">
+      <h1>Project 2</h1>
+      <h2>New York City Incident Distribution</h2>
+      <div class="map">
+        <svg
+          id="NewYorkMap"
+          height="800"
+          width="800"
+          style="margin-right: 60px"
+        ></svg>
 
-<body>
-  <div class="container">
-    <h1>Project 2</h1>
-    <h2>New York City Incident Distribution</h2>
-    <div class="map">
-      <svg id="NewYorkMap" height="800" width="800" style="margin-right: 60px"></svg>
-
-      <script>
-        const map = d3.select("svg#NewYorkMap");
-        const width = map.attr("width");
-        const height = map.attr("height");
-        const margin = { top: 10, right: 10, bottom: 50, left: 50 };
-        const mapWidth = width - margin.left - margin.right;
-        const mapHeight = height - margin.top - margin.bottom;
-        const annotations = map.append("g").attr("id", "annotations");
-        const mapArea = map
-          .append("g")
-          .attr("id", "points")
-          .attr("transform", `translate(${margin.left},${margin.top})`);
-
-        const requestData = async function () {
-          //load map data
-          const NewYork = await d3.json("Borough Boundaries.geojson");
-          //load incident to date data
-          const incidentHistory = await d3.csv("NYPD_Shooting_Incident_Data__Historic_.csv");
-
-          const mapProjection = d3
-            .geoMercator()
-            .fitSize([mapWidth, mapHeight], NewYork);
-          const path = d3.geoPath().projection(mapProjection);
-
-          //base map
-          let wholeMap = mapArea
-            .selectAll("path.polygon")
-            .data(NewYork.features)
-            .join("path")
-            .attr("class", "polygon")
-            .attr("d", path)
-            .attr("stroke", "grey");
-
-          // vicitm circle size
-          const Victim_Circle_Size_Initial = 4
-          const Victim_Circle_Size_Hover = 12
-          const Inactive_Victim_Opa = 0.5
-
-          // age color scale
-          const ageColors = [
-            "#ffbe0b",
-            "#fb5607",
-            "#ff006e",
-            "#8338ec",
-            "#3a86ff",
-          ];
-          const ageColorScale = d3
-            .scaleOrdinal()
-            .domain(["0-17", "18-24", "25-44", "45-64", "65+"])
-            .range(ageColors);
-
-          //get year extent
-          const timeExtent = d3.extent(incidentHistory, (d) => formatYear(d.OCCUR_DATE));
-
-          //create time slider
-          const gTime = d3
-            .select("div#slider")
-            .append("svg")
-            .attr("width", 560)
-            .attr("height", 100);
-
-          const sliderArea = gTime
+        <script>
+          const map = d3.select("svg#NewYorkMap");
+          const width = map.attr("width");
+          const height = map.attr("height");
+          const margin = { top: 10, right: 10, bottom: 50, left: 50 };
+          const mapWidth = width - margin.left - margin.right;
+          const mapHeight = height - margin.top - margin.bottom;
+          const annotations = map.append("g").attr("id", "annotations");
+          const mapArea = map
             .append("g")
-            .attr("transform", "translate(30,30)");
+            .attr("id", "points")
+            .attr("transform", `translate(${margin.left},${margin.top})`);
 
-          //set slider bar range
-          const dataTime = d3
-            .range(timeExtent[0], timeExtent[1] + 1)
-            .map(function (d) {
-              return new Date(d, 01, 01);
-            });
+          const requestData = async function () {
+            //load map data
+            const NewYork = await d3.json("Borough Boundaries.geojson");
+            //load incident to date data
+            const incidentHistory = await d3.csv(
+              "NYPD_Shooting_Incident_Data__Historic_.csv"
+            );
 
-          //default view to show data of latest year
-          const defaultYear = timeExtent[1];
-          let selectedYear = defaultYear;
+            const mapProjection = d3
+              .geoMercator()
+              .fitSize([mapWidth, mapHeight], NewYork);
+            const path = d3.geoPath().projection(mapProjection);
 
-          let showFemale = true;
-          let showMale = true;
-
-          // filter data based on year slider and other options
-          let filteredData = [];
-          function filterData() {
-            filteredData = [];
-            for (let d of incidentHistory) {
-              //console.log(d);
-              //filter year
-              if (formatYear(d.OCCUR_DATE) != selectedYear)
-                continue;
-
-              if (!showFemale && d.VIC_SEX == "F") {
-                continue;
-              }
-              //console.log(!showMale,d.VIC_SEX == "M")
-              if (!showMale && d.VIC_SEX == "M")
-                continue;
-
-              filteredData.push(d);
-              //console.log(filteredData.length)
+            //base map
+            let wholeMap = mapArea
+              .selectAll("path.polygon")
+              .data(NewYork.features)
+              .join("path")
+              .attr("class", "polygon")
+              .attr("d", path)
+              .attr("stroke", "grey");
+            //zoom
+            const zoom = d3
+              .zoom()
+              .scaleExtent([1, 10])
+              .translateExtent([
+                [-300, -300],
+                [mapWidth, mapHeight],
+              ])
+              .on("zoom", zoomIn);
+            map.call(zoom);
+            function zoomIn(event) {
+              mapArea.attr("transform", event.transform);
+              wholeMap.attr("stroke-width", `${1 / event.transform.k}px`);
             }
-          }
 
-          // draw initial circles for victs
-          filterData();
-          let vic = mapArea
-            .selectAll("circle")
-            .data(filteredData)
-            .join("circle")
-            .attr("class", "incident")
-            .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0])
-            .attr("cy", (d) => mapProjection([d.Longitude, d.Latitude])[1] + jitter())
-            .attr("r", Victim_Circle_Size_Initial)
-            .style("fill", d => ageColorScale(d.VIC_AGE_GROUP))
-            .attr("opacity", Inactive_Victim_Opa)
-            .on("mouseover", hoverVictim)
-            .on("mouseout", leaveVictim);
-          // call updateVic after change a selection or drag the slider
-          function updateVic() {
+            // vicitm circle size
+            const Victim_Circle_Size_Initial = 4;
+            const Victim_Circle_Size_Hover = 12;
+            const Inactive_Victim_Opa = 0.5;
+
+            // age color scale
+            const ageColors = [
+              "#ffbe0b",
+              "#fb5607",
+              "#ff006e",
+              "#8338ec",
+              "#3a86ff",
+            ];
+            const ageColorScale = d3
+              .scaleOrdinal()
+              .domain(["0-17", "18-24", "25-44", "45-64", "65+"])
+              .range(ageColors);
+
+            //get year extent
+            const timeExtent = d3.extent(incidentHistory, (d) =>
+              formatYear(d.OCCUR_DATE)
+            );
+
+            //create time slider
+            const gTime = d3
+              .select("div#slider")
+              .append("svg")
+              .attr("width", 560)
+              .attr("height", 100);
+
+            const sliderArea = gTime
+              .append("g")
+              .attr("transform", "translate(30,30)");
+
+            //set slider bar range
+            const dataTime = d3
+              .range(timeExtent[0], timeExtent[1] + 1)
+              .map(function (d) {
+                return new Date(d, 01, 01);
+              });
+
+            //default view to show data of latest year
+            const defaultYear = timeExtent[1];
+            let selectedYear = defaultYear;
+
+            let showFemale = true;
+            let showMale = true;
+
+            // filter data based on year slider and other options
+            let filteredData = [];
+            function filterData() {
+              filteredData = [];
+              for (let d of incidentHistory) {
+                //console.log(d);
+                //filter year
+                if (formatYear(d.OCCUR_DATE) != selectedYear) continue;
+
+                if (!showFemale && d.VIC_SEX == "F") {
+                  continue;
+                }
+                //console.log(!showMale,d.VIC_SEX == "M")
+                if (!showMale && d.VIC_SEX == "M") continue;
+
+                filteredData.push(d);
+                //console.log(filteredData.length)
+              }
+            }
+
+            // draw initial circles for victs
             filterData();
-            mapArea.selectAll("circle").data(filteredData)
-              .join(enter => enter.append('circle')
-                .attr("class", "incident")
-                .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0])
-                .attr("cy", (d) => mapProjection([d.Longitude, d.Latitude])[1])
-                .attr("r", Victim_Circle_Size_Initial)
-                .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
-                .attr("opacity", Inactive_Victim_Opa)
-                .on("mouseover", hoverVictim)
-                .on("mouseout", leaveVictim)
-                .call(enter => enter.transition()
-                  .attr('opacity', Inactive_Victim_Opa)),
-                update => update.call(update => update
-                  .attr("class", "incident")
-                  .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0])
-                  .attr("cy", (d) => mapProjection([d.Longitude, d.Latitude])[1])
-                  .attr("r", Victim_Circle_Size_Initial)
-                  .on("mouseover", hoverVictim)
-                  .on("mouseout", leaveVictim)
-                  .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
-                  .attr("opacity", Inactive_Victim_Opa)),
-                exit => exit.call(exit => exit.transition().attr('opacity', 0).remove()),
-              );
-          }
+            let vic = mapArea
+              .selectAll("circle")
+              .data(filteredData)
+              .join("circle")
+              .attr("class", "incident")
+              .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0])
+              .attr(
+                "cy",
+                (d) => mapProjection([d.Longitude, d.Latitude])[1] + jitter()
+              )
+              .attr("r", Victim_Circle_Size_Initial)
+              .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
+              .attr("opacity", Inactive_Victim_Opa)
+              .on("mouseover", hoverVictim)
+              .on("mouseout", leaveVictim);
+            // call updateVic after change a selection or drag the slider
+            function updateVic() {
+              filterData();
+              mapArea
+                .selectAll("circle")
+                .data(filteredData)
+                .join(
+                  (enter) =>
+                    enter
+                      .append("circle")
+                      .attr("class", "incident")
+                      .attr(
+                        "cx",
+                        (d) => mapProjection([d.Longitude, d.Latitude])[0]
+                      )
+                      .attr(
+                        "cy",
+                        (d) => mapProjection([d.Longitude, d.Latitude])[1]
+                      )
+                      .attr("r", Victim_Circle_Size_Initial)
+                      .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
+                      .attr("opacity", Inactive_Victim_Opa)
+                      .on("mouseover", hoverVictim)
+                      .on("mouseout", leaveVictim)
+                      .call((enter) =>
+                        enter.transition().attr("opacity", Inactive_Victim_Opa)
+                      ),
+                  (update) =>
+                    update.call((update) =>
+                      update
+                        .attr("class", "incident")
+                        .attr(
+                          "cx",
+                          (d) => mapProjection([d.Longitude, d.Latitude])[0]
+                        )
+                        .attr(
+                          "cy",
+                          (d) => mapProjection([d.Longitude, d.Latitude])[1]
+                        )
+                        .attr("r", Victim_Circle_Size_Initial)
+                        .on("mouseover", hoverVictim)
+                        .on("mouseout", leaveVictim)
+                        .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
+                        .attr("opacity", Inactive_Victim_Opa)
+                    ),
+                  (exit) =>
+                    exit.call((exit) =>
+                      exit.transition().attr("opacity", 0).remove()
+                    )
+                );
+            }
 
-          //use sliderBar to control which year of victims are drawn
-          let sliderTime = d3
-            .sliderBottom()
-            .min(new Date(timeExtent[0], 01, 01))
-            .max(new Date(timeExtent[1], 12, 31))
-            .step(1000 * 60 * 60 * 24 * 365)
-            .width(500)
-            .tickFormat(d3.timeFormat("%Y"))
-            .tickValues(dataTime)
-            .default(new Date(timeExtent[1], 01, 01))
-            .on("end", (val) => {
-              if (!event.active) {
-                selectedYear = val.getFullYear();
-                updateVic();
-              }
+            //use sliderBar to control which year of victims are drawn
+            let sliderTime = d3
+              .sliderBottom()
+              .min(new Date(timeExtent[0], 01, 01))
+              .max(new Date(timeExtent[1], 12, 31))
+              .step(1000 * 60 * 60 * 24 * 365)
+              .width(500)
+              .tickFormat(d3.timeFormat("%Y"))
+              .tickValues(dataTime)
+              .default(new Date(timeExtent[1], 01, 01))
+              .on("end", (val) => {
+                if (!event.active) {
+                  selectedYear = val.getFullYear();
+                  updateVic();
+                }
+              });
+
+            sliderArea.call(sliderTime);
+
+            d3.select("p#time").text(d3.timeFormat("%Y")(sliderTime.value()));
+
+            const Active_Btn_Color = "#ffbe0b";
+            const Inactive_Btn_Color = "#aaa";
+
+            //append gender selections
+            const genderOption = ["Male", "Female", "Clear"];
+            genderOption.forEach((text) => {
+              d3.select("div#button-bar")
+                .append("button")
+                .attr("id", `gender-btn-${text}`)
+                .text(text)
+                .style("background-color", Active_Btn_Color)
+                .on("click", filterGender);
             });
 
-          sliderArea.call(sliderTime);
+            //set gender btn color and update dots
+            function filterGender() {
+              let gender = d3.select(this).text();
 
-          d3.select("p#time").text(d3.timeFormat("%Y")(sliderTime.value()));
+              if (gender == "Female") {
+                showFemale = !showFemale;
+                if (showFemale)
+                  d3.select("#gender-btn-Female").style(
+                    "background-color",
+                    Active_Btn_Color
+                  );
+                else
+                  d3.select("#gender-btn-Female").style(
+                    "background-color",
+                    Inactive_Btn_Color
+                  );
+              }
 
-          const Active_Btn_Color = "#ffbe0b"
-          const Inactive_Btn_Color = "#aaa"
+              if (gender == "Male") {
+                showMale = !showMale;
+                if (showMale)
+                  d3.select("#gender-btn-Male").style(
+                    "background-color",
+                    Active_Btn_Color
+                  );
+                else
+                  d3.select("#gender-btn-Male").style(
+                    "background-color",
+                    Inactive_Btn_Color
+                  );
+              }
 
-          //append gender selections
-          const genderOption = ["Male", "Female", "Clear"]
-          genderOption.forEach(text => {
-            d3.select("div#button-bar")
-              .append("button")
-              .attr("id", `gender-btn-${text}`)
-              .text(text)
-              .style("background-color", Active_Btn_Color)
-              .on("click", filterGender)
-          })
+              if (gender == "Clear") {
+                showFemale = true;
+                showMale = true;
+                d3.select("#gender-btn-Female").style(
+                  "background-color",
+                  Active_Btn_Color
+                );
+                d3.select("#gender-btn-Male").style(
+                  "background-color",
+                  Active_Btn_Color
+                );
+              }
 
-          //set gender btn color and update dots            
-          function filterGender() {
-            let gender = d3.select(this).text();
-
-            if (gender == "Female") {
-              showFemale = !showFemale;
-              if (showFemale) d3.select("#gender-btn-Female").style("background-color", Active_Btn_Color)
-              else d3.select("#gender-btn-Female").style("background-color", Inactive_Btn_Color)
+              updateVic();
             }
 
-            if (gender == "Male") {
-              showMale = !showMale;
-              if (showMale) d3.select("#gender-btn-Male").style("background-color", Active_Btn_Color)
-              else d3.select("#gender-btn-Male").style("background-color", Inactive_Btn_Color)
+            //create tooltip for hovering
+            let layerText = map.append("g").attr("id", "textBox");
+            let labelBox = layerText
+              .append("rect")
+              .attr("id", "label-box")
+              .attr("height", 50)
+              .style("fill", "#000")
+              .style("opacity", 0);
+
+            let label1 = layerText
+              .append("text")
+              .attr("id", "label")
+              .attr("x", "10")
+              .attr("y", "10")
+              .style("fill", "#fff")
+              .attr("text-anchor", "middle")
+              .attr("alignment-baseline", "middle");
+            let label2 = layerText
+              .append("text")
+              .attr("id", "label")
+              .style("fill", "#fff")
+              .attr("text-anchor", "middle")
+              .attr("alignment-baseline", "middle");
+            let boxHeight = 0;
+            let boxWidth = 0;
+
+            //set tooptip text
+            //first line is age
+            //second line is race
+            function setLabelText(d, x, y) {
+              label1.text("Victim age: " + d.VIC_AGE_GROUP);
+              let vicRace = d.VIC_RACE == null ? "/" : d.VIC_RACE;
+              label2.text("Victim race: " + vicRace);
+
+              //set box width based on string length
+              let len = vicRace.length > 8 ? vicRace.length : 8;
+              boxWidth = len * 20;
+
+              //handle edge case so that tooltips for dots close to boundary don't get cropped
+              let offsetY = y < 50 ? 100 : 0;
+              let offsetX = x > 750 ? -50 : 0;
+
+              label1.attr("x", x + offsetX).attr("y", y - 27 + offsetY);
+              label2.attr("x", x + offsetX).attr("y", y - 10 + offsetY);
+
+              labelBox
+                .attr("x", x - boxWidth / 2.0 + offsetX)
+                .attr("y", y - 30 - 15 + offsetY)
+                .attr("width", boxWidth)
+                .style("opacity", 0.5);
+
+              document.getElementById("info-date").innerHTML = d.OCCUR_DATE;
+              document.getElementById("info-gender").innerHTML =
+                d.PERP_SEX == "F" ? "Female" : "Male";
+              document.getElementById("info-race").innerHTML = d.VIC_RACE;
+              document.getElementById("info-age").innerHTML = d.VIC_AGE_GROUP;
             }
 
-            if (gender == "Clear") {
-              showFemale = true;
-              showMale = true;
-              d3.select("#gender-btn-Female").style("background-color", Active_Btn_Color)
-              d3.select("#gender-btn-Male").style("background-color", Active_Btn_Color)
+            // remove tooltip
+            function clearTooptip() {
+              labelBox.style("opacity", 0);
+              label1.text("");
+              label2.text("");
+              document.getElementById("info-date").innerHTML = "";
+              document.getElementById("info-gender").innerHTML = "";
+              document.getElementById("info-race").innerHTML = "";
+              document.getElementById("info-age").innerHTML = "";
             }
 
-            updateVic();
-          }
+            //hover on victim dot, show tooltip
+            function hoverVictim(event, d) {
+              let year = formatYear(d.OCCUR_DATE);
+              if (year != selectedYear) return;
 
-          //create tooltip for hovering
-          let layerText = map.append("g").attr("id", "textBox");
-          let labelBox = layerText
-            .append("rect")
-            .attr("id", "label-box")
-            .attr("height", 50)
-            .style("fill", "#000")
-            .style("opacity", 0);
+              let x = Number(d3.select(this).attr("cx")) + 50;
+              let y = Number(d3.select(this).attr("cy"));
 
-          let label1 = layerText
-            .append("text")
-            .attr("id", "label")
-            .attr("x", "10")
-            .attr("y", "10")
-            .style("fill", "#fff")
-            .attr("text-anchor", "middle")
-            .attr("alignment-baseline", "middle");
-          let label2 = layerText
-            .append("text")
-            .attr("id", "label")
-            .style("fill", "#fff")
-            .attr("text-anchor", "middle")
-            .attr("alignment-baseline", "middle");
-          let boxHeight = 0;
-          let boxWidth = 0;
+              setLabelText(d, x, y);
 
+              d3.select(this)
+                .transition()
+                .duration(200)
+                .attr("opacity", 1)
+                .attr("r", Victim_Circle_Size_Hover);
+            }
 
-          //set tooptip text
-          //first line is age
-          //second line is race
-          function setLabelText(d, x, y) {
-            label1.text("Victim age: " + d.VIC_AGE_GROUP);
-            let vicRace = d.VIC_RACE == null ? "/" : d.VIC_RACE;
-            label2.text("Victim race: " + vicRace);
+            //leave victim dot, clear tooltip
+            function leaveVictim(event, d) {
+              let year = formatYear(d.OCCUR_DATE);
+              if (year != selectedYear) return;
 
-            //set box width based on string length
-            let len = vicRace.length > 8 ? vicRace.length : 8;
-            boxWidth = len * 20;
+              clearTooptip();
+              d3.select(this)
+                .transition()
+                .duration(200)
+                .attr("opacity", 0.5)
+                .attr("r", Victim_Circle_Size_Initial);
+            }
 
-            //handle edge case so that tooltips for dots close to boundary don't get cropped
-            let offsetY = y < 50 ? 100 : 0;
-            let offsetX = x > 750 ? -50 : 0;
+            //generate random number between -4 and 4
+            function jitter() {
+              return Math.random() * 8 - 4;
+            }
 
-            label1.attr("x", x + offsetX).attr("y", y - 27 + offsetY);
-            label2.attr("x", x + offsetX).attr("y", y - 10 + offsetY);
+            //get year from the date
+            function formatYear(rawDate) {
+              let date = new Date(rawDate);
+              return date.getFullYear();
+            }
 
-            labelBox
-              .attr("x", x - boxWidth / 2.0 + offsetX)
-              .attr("y", y - 30 - 15 + offsetY)
-              .attr("width", boxWidth)
-              .style("opacity", 0.5);
+            //draw age legend
+            const keys = ["0-17", "18-24", "25-44", "45-64", "65+"];
+            const legend = d3.select("#legend");
+            const size = 15;
 
-            document.getElementById("info-date").innerHTML = d.OCCUR_DATE;
-            document.getElementById("info-gender").innerHTML =
-              d.PERP_SEX == "F" ? "Female" : "Male";
-            document.getElementById("info-race").innerHTML = d.VIC_RACE;
-            document.getElementById("info-age").innerHTML = d.VIC_AGE_GROUP;
-          }
+            legend
+              .selectAll("mydots")
+              .data(keys)
+              .enter()
+              .append("circle")
+              .attr("cx", function (d, i) {
+                return 11 + i * 62;
+              })
+              .attr("cy", 30) // 100 is where the first dot appears. 25 is the distance between dots
+              .attr("r", 6.5)
+              .style("fill", (d) => ageColorScale(d));
 
-          // remove tooltip
-          function clearTooptip() {
-            labelBox.style("opacity", 0);
-            label1.text("");
-            label2.text("");
-            document.getElementById("info-date").innerHTML = "";
-            document.getElementById("info-gender").innerHTML = "";
-            document.getElementById("info-race").innerHTML = "";
-            document.getElementById("info-age").innerHTML = "";
-          }
+            legend
+              .selectAll("mylabels")
+              .data(keys)
+              .enter()
+              .append("text")
+              .attr("x", function (d, i) {
+                return 18 + i * 62;
+              })
+              .attr("y", 32) // 100 is where the first dot appears. 25 is the distance between dots
+              .style("fill", (d) => ageColorScale(d))
+              .text(function (d) {
+                return d;
+              })
+              .attr("text-anchor", "left")
+              .style("alignment-baseline", "middle");
 
-          //hover on victim dot, show tooltip
-          function hoverVictim(event, d) {
-            let year = formatYear(d.OCCUR_DATE);
-            if (year != selectedYear) return;
+            legend
+              .append("text")
+              .attr("x", 0)
+              .attr("y", 12)
+              .text("Victim Age Group");
+          };
+          requestData();
+        </script>
 
-            let x = Number(d3.select(this).attr("cx")) + 50;
-            let y = Number(d3.select(this).attr("cy"));
+        <div class="info">
+          <div>
+            <h6>Date of incident:</h6>
+            <p id="info-date"></p>
+          </div>
+          <div>
+            <h6>Victim Gender:</h6>
+            <p id="info-gender"></p>
+          </div>
+          <div>
+            <h6>Victim Race:</h6>
+            <p id="info-race"></p>
+          </div>
+          <div>
+            <h6>Victim Age:</h6>
+            <p id="info-age"></p>
+          </div>
+        </div>
+      </div>
+      <svg id="legend" height="50" width="450"></svg>
+      <div class="legend"></div>
 
-            setLabelText(d, x, y);
-
-            d3.select(this)
-              .transition()
-              .duration(200)
-              .attr("opacity", 1)
-              .attr("r", Victim_Circle_Size_Hover);
-          }
-
-          //leave victim dot, clear tooltip
-          function leaveVictim(event, d) {
-            let year = formatYear(d.OCCUR_DATE);
-            if (year != selectedYear) return;
-
-            clearTooptip();
-            d3.select(this)
-              .transition()
-              .duration(200)
-              .attr("opacity", 0.5)
-              .attr("r", Victim_Circle_Size_Initial);
-          }
-
-          //generate random number between -4 and 4
-          function jitter() {
-            return Math.random() * 8 - 4;
-          }
-
-          //get year from the date
-          function formatYear(rawDate) {
-            let date = new Date(rawDate)
-            return date.getFullYear()
-          }
-
-          //draw age legend
-          const keys = ["0-17", "18-24", "25-44", "45-64", "65+"];
-          const legend = d3.select("#legend");
-          const size = 15;
-
-          legend
-            .selectAll("mydots")
-            .data(keys)
-            .enter()
-            .append("circle")
-            .attr("cx", function (d, i) {
-              return 11 + i * 62;
-            })
-            .attr("cy", 30) // 100 is where the first dot appears. 25 is the distance between dots
-            .attr("r", 6.5)
-            .style("fill", (d) => ageColorScale(d));
-
-          legend
-            .selectAll("mylabels")
-            .data(keys)
-            .enter()
-            .append("text")
-            .attr("x", function (d, i) {
-              return 18 + i * 62;
-            })
-            .attr("y", 32) // 100 is where the first dot appears. 25 is the distance between dots
-            .style("fill", (d) => ageColorScale(d))
-            .text(function (d) {
-              return d;
-            })
-            .attr("text-anchor", "left")
-            .style("alignment-baseline", "middle");
-
-          legend.append("text").attr("x", 0).attr("y", 12).text("Victim Age Group");
-        };
-        requestData();
-      </script>
-
-
-      <div class="info">
+      <div>
         <div>
-          <h6>Date of incident:</h6>
-          <p id="info-date"></p>
+          <h6>Filter incidents by year:</h6>
+          <div id="slider"></div>
         </div>
         <div>
-          <h6>Victim Gender:</h6>
-          <p id="info-gender"></p>
-        </div>
-        <div>
-          <h6>Victim Race:</h6>
-          <p id="info-race"></p>
-        </div>
-        <div>
-          <h6>Victim Age:</h6>
-          <p id="info-age"></p>
+          <h6>Victim Age Group:</h6>
+          <div id="button-bar"></div>
         </div>
       </div>
     </div>
-    <svg id="legend" height="50" width="450"></svg>
-    <div class="legend"></div>
-
-    <div>
-      <div>
-        <h6>Filter incidents by year:</h6>
-        <div id="slider"></div>
-      </div>
-      <div>
-        <h6>Victim Age Group: </h6>
-        <div id="button-bar"></div>
-      </div>
-    </div>
-  </div>
-</body>
-
+  </body>
 </html>
