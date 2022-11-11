@@ -229,6 +229,46 @@
 
             d3.select("p#time").text(d3.timeFormat("%Y")(sliderTime.value()));
 
+            const Active_Btn_Color ="#ffbe0b"
+            const Inactive_Btn_Color ="#aaa"
+
+            //append gender selections
+            const genderOption=["Male", "Female", "Clear"]
+            genderOption.forEach(text=>{
+                d3.select("div#button-bar")
+                .append("button")
+                .attr("id", `gender-btn-${text}`)
+                .text( text )
+                .style("background-color", Active_Btn_Color)
+                .on("click", filterGender)
+            })
+
+            //set gender btn color and update dots            
+            function filterGender(){
+              let gender = d3.select(this).text();
+              
+              if(gender == "Female") {
+                showFemale = !showFemale;
+                if(showFemale) d3.select("#gender-btn-Female").style("background-color",Active_Btn_Color)
+                else d3.select("#gender-btn-Female").style("background-color",Inactive_Btn_Color)
+              }
+
+              if(gender == "Male") {
+                showMale = !showMale;
+                if(showMale) d3.select("#gender-btn-Male").style("background-color",Active_Btn_Color)
+                else d3.select("#gender-btn-Male").style("background-color",Inactive_Btn_Color)
+              }
+
+              if(gender == "Clear") {
+                showFemale = true;
+                showMale = true;
+                d3.select("#gender-btn-Female").style("background-color",Active_Btn_Color)
+                d3.select("#gender-btn-Male").style("background-color",Active_Btn_Color)
+              }
+
+              updateVic();
+            }
+
             //create tooltip for hovering
             let layerText = map.append("g").attr("id", "textBox");
             let labelBox = layerText
@@ -255,54 +295,20 @@
             let boxHeight = 0;
             let boxWidth = 0;
 
-           
 
-            const genderOption=["Male", "Female", "Clear"]
-            genderOption.forEach(text=>{
-                d3.select("div#button-bar")
-                .append("button")
-                .attr("id", `gender-btn-${text}`)
-                .text( text )
-                .style("background-color","#ffbe0b")
-                .on("click", filterGender)
-            })
-            
-            function filterGender(){
-              
-              let gender = d3.select(this).text();
-              
-              if(gender == "Female") {
-                showFemale = !showFemale;
-                if(showFemale) d3.select("#gender-btn-Female").style("background-color","#ffbe0b")
-                else d3.select("#gender-btn-Female").style("background-color","#aaa")
-              }
-              if(gender == "Male") {
-                showMale = !showMale;
-                if(showMale) d3.select("#gender-btn-Male").style("background-color","#ffbe0b")
-                else d3.select("#gender-btn-Male").style("background-color","#aaa")
-              }
-              if(gender == "Clear") {
-                showFemale = true;
-                showMale = true;
-                d3.select("#gender-btn-Female").style("background-color","#ffbe0b")
-                d3.select("#gender-btn-Male").style("background-color","#ffbe0b")
-              }
-              console.log("female",showFemale)
-              console.log("male",showMale)
-              updateVic();
-
-            }
-
-
-
-            //tooptip text
+            //set tooptip text
+            //first line is age
+            //second line is race
             function setLabelText(d, x, y) {
               label1.text("Victim age: " + d.VIC_AGE_GROUP);
               let vicRace = d.VIC_RACE == null ? "/" : d.VIC_RACE;
               label2.text("Victim race: " + vicRace);
+              
+              //set box width based on string length
               let len = vicRace.length > 8 ? vicRace.length : 8;
               boxWidth = len * 20;
 
+              //handle edge case so that tooltips for dots close to boundary don't get cropped
               let offsetY = y < 50 ? 100 : 0;
               let offsetX = x > 750 ? -50 : 0;
 
@@ -314,6 +320,7 @@
                 .attr("y", y - 30 - 15 + offsetY)
                 .attr("width", boxWidth)
                 .style("opacity", 0.5);
+
               document.getElementById("info-date").innerHTML = d.OCCUR_DATE;
               document.getElementById("info-gender").innerHTML =
                 d.PERP_SEX == "F" ? "Female" : "Male";
@@ -321,6 +328,7 @@
               document.getElementById("info-age").innerHTML = d.VIC_AGE_GROUP;
             }
 
+            // remove tooltip
             function clearTooptip() {
               labelBox.style("opacity", 0);
               label1.text("");
@@ -331,6 +339,7 @@
               document.getElementById("info-age").innerHTML = "";
             }
 
+            //hover on victim dot, show tooltip
             function hoverVictim(event, d) {
               let year = formatYear(d.OCCUR_DATE);
               if (year != selectedYear) return;
@@ -347,6 +356,7 @@
                 .attr("r", Victim_Circle_Size_Hover);
             }
 
+            //leave victim dot, clear tooltip
             function leaveVictim(event, d) {
               let year = formatYear(d.OCCUR_DATE);
               if (year != selectedYear) return;
@@ -364,19 +374,13 @@
               return Math.random() * 8 - 4;
             }
 
-            //format age group
-            function formatAgeGroup(age) {
-              if (age.charAt(0) == "<") return 0;
-              return Number(age.substring(0, 2));
-            }
-
             //get year from the date
             function formatYear(rawDate){
               let date = new Date(rawDate)
               return date.getFullYear()
             }
 
-            //legend
+            //draw age legend
             const keys = ["0-17", "18-24", "25-44", "45-64", "65+"];
             const legend = d3.select("#legend");
             const size = 15;    
@@ -413,6 +417,8 @@
           };
           requestData();
         </script>
+
+
         <div class="info">
           <div>
             <h6>Date of incident:</h6>
