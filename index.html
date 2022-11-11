@@ -97,21 +97,9 @@
               .attr("stroke", "grey");
 
             //load incident to date data
-            //const incidenttoDate = await d3.csv("NYPD_Shooting_Incident_Data__Year_To_Date_.csv");
-            const incidentHistory = await d3.csv(
-              "NYPD_Shooting_Incident_Data__Historic_.csv"
-            );
+            const incidentHistory = await d3.csv("NYPD_Shooting_Incident_Data__Historic_.csv");
 
-            //console.log(incidentHistory);
-
-            //create age group color and scale
-            // const ageColors = [
-            //   "#ee8070",
-            //   "#ffd438",
-            //   "#df65b0",
-            //   "#c51a72",
-            //   "#8d0c22",
-            // ];
+            // age color scale
             const ageColors = [
               "#ffbe0b",
               "#fb5607",
@@ -124,29 +112,9 @@
               .domain(["0-17", "18-24", "25-44", "45-64", "65+"])
               .range(ageColors);
 
-            //split the dataset into female vics and male vics
-            let femaleincidentHistory = [];
-            let maleincidentHistory = [];
-
-            incidentHistory.forEach((d) => {
-              if (d.Latitude.length > 0 && d.Longitude.length > 0) {
-                d.incidentDot = mapProjection([d.Longitude, d.Latitude]);
-                if (d.VIC_SEX == "F") femaleincidentHistory.push(d);
-                if (d.VIC_SEX == "M") maleincidentHistory.push(d);
-              }
-            });
-
             //get year extent
-            const timeExtentFemale = d3.extent(femaleincidentHistory, (d) =>
-              Number(d.OCCUR_DATE.slice(d.OCCUR_DATE.length - 4))
-            );
-            const timeExtentMale = d3.extent(maleincidentHistory, (d) =>
-              Number(d.OCCUR_DATE.slice(d.OCCUR_DATE.length - 4))
-            );
-            const timeExtent = [
-              Math.min(timeExtentFemale[0], timeExtentMale[0]),
-              Math.max(timeExtentFemale[1], timeExtentMale[1]),
-            ];
+            const timeExtent = d3.extent(incidentHistory, (d) => formatYear(d.OCCUR_DATE));
+            
             //create time slider
             let gTime = d3
               .select("div#slider")
@@ -158,51 +126,30 @@
               .append("g")
               .attr("transform", "translate(30,30)");
 
+            //set slider bar range
             let dataTime = d3
               .range(timeExtent[0], timeExtent[1] + 1)
               .map(function (d) {
                 return new Date(d, 01, 01);
               });
 
-            //default view is show data of 2021
+            //default view to show data of latest year
             const defaultYear = timeExtent[1];
             let selectedYear = defaultYear;
 
-            // draw circle for female victs
-            let femaleVic = mapArea
+            // draw circle for victs
+            let vic = mapArea
               .selectAll("circle")
-              .data(femaleincidentHistory)
+              .data(incidentHistory)
               .join("circle")
               .attr("class", "incident-female")
-              .attr("cx", (d) => d.incidentDot[0] + jitter())
-              .attr("cy", (d) => d.incidentDot[1] + jitter())
-              .attr("r", 4)
+              .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0] + jitter())
+              .attr("cy", (d) => mapProjection([d.Longitude, d.Latitude])[1] + jitter())
+              .attr("r", 5)
               .style("fill", (d) =>
                 ageColorScale((d) => formatAgeGroup(d.VIC_AGE_GROUP))
               )
-              .attr("opacity", (d) =>
-                d.OCCUR_DATE.slice(d.OCCUR_DATE.length - 4) == defaultYear
-                  ? 0.6
-                  : 0
-              );
-
-            // draw triangle for for male victs
-            let maleVic = mapArea
-              .selectAll("rect")
-              .data(maleincidentHistory)
-              .join("rect")
-              .attr("class", "incident-male")
-              .attr("x", (d) => d.incidentDot[0] + jitter())
-              .attr("y", (d) => d.incidentDot[1] + jitter())
-              .attr("width", 4)
-              .attr("height", 4)
-              .style("fill", (d) =>
-                ageColorScale((d) => formatAgeGroup(d.VIC_AGE_GROUP))
-              )
-              .attr("opacity", (d) =>
-                d.OCCUR_DATE.slice(d.OCCUR_DATE.length - 4) == defaultYear
-                  ? 0.6
-                  : 0
+              .attr("opacity", (d) => formatYear(d.OCCUR_DATE) == defaultYear ? 0.6: 0
               );
 
             //use sliderBar to show and hide symbols
@@ -218,17 +165,9 @@
               .on("end", (val) => {
                 if (!event.active) {
                   selectedYear = val.getFullYear();
-                  femaleVic.call((enter) => {
+                  vic.call((enter) => {
                     enter.transition().attr("opacity", (d) => {
-                      return d.OCCUR_DATE.slice(d.OCCUR_DATE.length - 4) ==
-                        selectedYear
-                        ? 0.5
-                        : 0;
-                    });
-                  });
-                  maleVic.call((enter) => {
-                    enter.transition().attr("opacity", (d) => {
-                      return d.OCCUR_DATE.slice(d.OCCUR_DATE.length - 4) ==
+                      return formatYear(d.OCCUR_DATE) ==
                         selectedYear
                         ? 0.5
                         : 0;
@@ -267,11 +206,8 @@
             let boxHeight = 0;
             let boxWidth = 0;
 
-            femaleVic.on("mouseover", hoverFemaleVictim);
-            femaleVic.on("mouseout", leaveFemaleVictim);
-
-            maleVic.on("mouseover", hoverMaleVictim);
-            maleVic.on("mouseout", leaveMaleVictim);
+            vic.on("mouseover", hoverVictim);
+            vic.on("mouseout", leaveVictim);
 
             // const genderOption=["Male", "Female"]
             // genderOption.forEach(d=>{
@@ -319,8 +255,8 @@
               // document.getElementById("info-age").innerHTML = "";
             }
 
-            function hoverFemaleVictim(event, d) {
-              let year = Number(d.OCCUR_DATE.slice(d.OCCUR_DATE.length - 4));
+            function hoverVictim(event, d) {
+              let year = formatYear(d.OCCUR_DATE);
               if (year != selectedYear) return;
 
               let x = Number(d3.select(this).attr("cx")) + 50;
@@ -335,8 +271,8 @@
                 .attr("r", 12);
             }
 
-            function leaveFemaleVictim(event, d) {
-              let year = Number(d.OCCUR_DATE.slice(d.OCCUR_DATE.length - 4));
+            function leaveVictim(event, d) {
+              let year = formatYear(d.OCCUR_DATE);
               if (year != selectedYear) return;
 
               clearTooptip();
@@ -345,37 +281,7 @@
                 .duration(200)
                 .attr("opacity", 0.5)
                 .attr("r", 6);
-            }
-
-            function hoverMaleVictim(event, d) {
-              let year = Number(d.OCCUR_DATE.slice(d.OCCUR_DATE.length - 4));
-              if (year != selectedYear) return;
-
-              let x = Number(d3.select(this).attr("x")) + 50;
-              let y = Number(d3.select(this).attr("y"));
-
-              setLabelText(d, x, y);
-
-              d3.select(this)
-                .transition()
-                .duration(200)
-                .attr("opacity", 1)
-                .attr("width", 16)
-                .attr("height", 16);
-            }
-
-            function leaveMaleVictim(event, d) {
-              let year = Number(d.OCCUR_DATE.slice(d.OCCUR_DATE.length - 4));
-              if (year != selectedYear) return;
-
-              clearTooptip();
-              d3.select(this)
-                .transition()
-                .duration(200)
-                .attr("opacity", 0.5)
-                .attr("width", 8)
-                .attr("height", 8);
-            }
+            } 
 
             //generate random number between -4 and 4
             function jitter() {
@@ -384,46 +290,21 @@
 
             //format age group
             function formatAgeGroup(age) {
-              console.log(age);
               if (age.charAt(0) == "<") return 0;
               return Number(age.substring(0, 2));
             }
 
+            function formatYear(rawDate){
+              let date = new Date(rawDate)
+              return date.getFullYear()
+            }
+
             //legend
             const keys = ["0-17", "18-24", "25-44", "45-64", "65+"];
-            const mLegend = d3.select("#mlegend");
-            const fLegend = d3.select("#flegend");
-            const size = 15;
-            mLegend
-              .selectAll("myrects")
-              .data(keys)
-              .enter()
-              .append("rect")
-              .attr("x", function (d, i) {
-                return i * (size + 50);
-              })
-              .attr("y", 20)
-              .attr("width", size)
-              .attr("height", size)
-              .style("fill", (d) => ageColorScale(d));
+            const legend = d3.select("#flegend");
+            const size = 15;    
 
-            mLegend
-              .selectAll("mylabels")
-              .data(keys)
-              .enter()
-              .append("text")
-              .attr("x", function (d, i) {
-                return 12 + i * (size + 50) + size / 2;
-              })
-              .attr("y", size * 2) // 100 is where the first dot appears. 25 is the distance between dots
-              .style("fill", (d) => ageColorScale(d))
-              .text((d) => d)
-              .attr("text-anchor", "left")
-              .style("alignment-baseline", "middle");
-
-            mLegend.append("text").attr("x", 0).attr("y", 12).text("Male");
-
-            fLegend
+            legend
               .selectAll("mydots")
               .data(keys)
               .enter()
@@ -435,7 +316,7 @@
               .attr("r", 7)
               .style("fill", (d) => ageColorScale(d));
 
-            fLegend
+            legend
               .selectAll("mylabels")
               .data(keys)
               .enter()
@@ -451,7 +332,7 @@
               .attr("text-anchor", "left")
               .style("alignment-baseline", "middle");
 
-            fLegend.append("text").attr("x", 0).attr("y", 12).text("Female");
+            legend.append("text").attr("x", 0).attr("y", 12).text("Victim Age Group");
           };
           requestData();
         </script>
@@ -474,8 +355,7 @@
           </div>
         </div> -->
       </div>
-      <svg id="mlegend" height="50" width="450"></svg>
-      <svg id="flegend" height="50" width="450"></svg>
+      <svg id="legend" height="50" width="450"></svg>
       <div class="legend"></div>
 
       <div>
