@@ -299,7 +299,7 @@
             function setLabelText(d, x, y) {
               label1.text("Victim age: " + d.VIC_AGE_GROUP);
               let vicRace = d.VIC_RACE == null ? "/" : d.VIC_RACE;
-              label2.text("Victim race: " + d.VIC_SEX);
+              label2.text("Victim race: " + vicRace);
               let len = vicRace.length > 8 ? vicRace.length : 8;
               boxWidth = len * 20;
 
@@ -314,21 +314,21 @@
                 .attr("y", y - 30 - 15 + offsetY)
                 .attr("width", boxWidth)
                 .style("opacity", 0.5);
-              // document.getElementById("info-date").innerHTML = d.OCCUR_DATE;
-              // document.getElementById("info-gender").innerHTML =
-              //   d.PERP_SEX == "F" ? "Female" : "Male";
-              // document.getElementById("info-race").innerHTML = d.PERP_RACE;
-              // document.getElementById("info-age").innerHTML = d.PERP_AGE_GROUP;
+              document.getElementById("info-date").innerHTML = d.OCCUR_DATE;
+              document.getElementById("info-gender").innerHTML =
+                d.PERP_SEX == "F" ? "Female" : "Male";
+              document.getElementById("info-race").innerHTML = d.VIC_RACE;
+              document.getElementById("info-age").innerHTML = d.VIC_AGE_GROUP;
             }
 
             function clearTooptip() {
               labelBox.style("opacity", 0);
               label1.text("");
               label2.text("");
-              // document.getElementById("info-date").innerHTML = "";
-              // document.getElementById("info-gender").innerHTML = "";
-              // document.getElementById("info-race").innerHTML = "";
-              // document.getElementById("info-age").innerHTML = "";
+              document.getElementById("info-date").innerHTML = "";
+              document.getElementById("info-gender").innerHTML = "";
+              document.getElementById("info-race").innerHTML = "";
+              document.getElementById("info-age").innerHTML = "";
             }
 
             function hoverVictim(event, d) {
@@ -413,7 +413,7 @@
           };
           requestData();
         </script>
-        <!-- <div class="info">
+        <div class="info">
           <div>
             <h6>Date of incident:</h6>
             <p id="info-date"></p>
@@ -430,7 +430,7 @@
             <h6>Victim Age:</h6>
             <p id="info-age"></p>
           </div>
-        </div> -->
+        </div>
       </div>
       <svg id="legend" height="50" width="450"></svg>
       <div class="legend"></div>
