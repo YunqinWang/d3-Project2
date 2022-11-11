@@ -141,17 +141,29 @@
             const defaultYear = timeExtent[1];
             let selectedYear = defaultYear;
 
+            let showFemale = true;
+            let showMale = true;
+
             // filter data based on year slider and other options
             let filteredData=[];
             function filterData(){
-              filteredData=[]
-              incidentHistory.forEach(d=>{
+              filteredData=[];
+              for (let d of incidentHistory){
+                //console.log(d);
                 //filter year
                 if(formatYear(d.OCCUR_DATE) != selectedYear)
-                  return;
+                  continue;
+
+                if(!showFemale && d.VIC_SEX == "F"){
+                  continue;
+                }
+                //console.log(!showMale,d.VIC_SEX == "M")
+                if(!showMale && d.VIC_SEX == "M")
+                  continue; 
 
                 filteredData.push(d);
-              })
+               //console.log(filteredData.length)
+              }
             }
 
             // draw initial circles for victs
@@ -160,34 +172,39 @@
               .selectAll("circle")
               .data(filteredData)
               .join("circle")
-              .attr("class", "incident-female")
-              .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0] + jitter())
+              .attr("class", "incident")
+              .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0])
               .attr("cy", (d) => mapProjection([d.Longitude, d.Latitude])[1] + jitter())
               .attr("r", Victim_Circle_Size_Initial)
-              .style("fill", (d) =>ageColorScale((d) => formatAgeGroup(d.VIC_AGE_GROUP)))
-              .attr("opacity", Inactive_Victim_Opa);
-
+              .style("fill", d=> ageColorScale(d.VIC_AGE_GROUP))
+              .attr("opacity", Inactive_Victim_Opa)
+              .on("mouseover", hoverVictim)
+              .on("mouseout", leaveVictim);
             // call updateVic after change a selection or drag the slider
             function updateVic(){
               filterData();
               mapArea.selectAll("circle").data(filteredData)
-                .join( 
-                  exit => exit.call( exit => exit.transition().attr('opacity',0).remove() ), 
-                  enter => enter.append('circle')
+                .join( enter => enter.append('circle')
                                 .attr("class", "incident")
-                                .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0] + jitter())
-                                .attr("cy", (d) => mapProjection([d.Longitude, d.Latitude])[1] + jitter())
+                                .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0])
+                                .attr("cy", (d) => mapProjection([d.Longitude, d.Latitude])[1])
                                 .attr("r", Victim_Circle_Size_Initial)
-                                .style("fill", (d) => ageColorScale((d) => formatAgeGroup(d.VIC_AGE_GROUP)))
+                                .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
                                 .attr("opacity", Inactive_Victim_Opa)
+                                .on("mouseover", hoverVictim)
+                                .on("mouseout", leaveVictim)
                                 .call( enter => enter.transition()
-                                                    .attr('opacity',1) ),
+                                                    .attr('opacity',Inactive_Victim_Opa) ),
                   update => update.call( update => update
-                                  . attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0] + jitter())
-                                  .attr("cy", (d) => mapProjection([d.Longitude, d.Latitude])[1] + jitter())
+                                  .attr("class", "incident")
+                                  .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0])
+                                  .attr("cy", (d) => mapProjection([d.Longitude, d.Latitude])[1])
                                   .attr("r", Victim_Circle_Size_Initial)
-                                  .style("fill", (d) => ageColorScale((d) => formatAgeGroup(d.VIC_AGE_GROUP)))
+                                  .on("mouseover", hoverVictim)
+                                  .on("mouseout", leaveVictim)
+                                  .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
                                   .attr("opacity", Inactive_Victim_Opa )),
+                  exit => exit.call( exit => exit.transition().attr('opacity',0).remove() ), 
                 ); 
             }
 
@@ -238,24 +255,51 @@
             let boxHeight = 0;
             let boxWidth = 0;
 
-            vic.on("mouseover", hoverVictim);
-            vic.on("mouseout", leaveVictim);
+           
 
-            const genderOption=["Male", "Female"]
-            genderOption.forEach(d=>{
+            const genderOption=["Male", "Female", "Clear"]
+            genderOption.forEach(text=>{
                 d3.select("div#button-bar")
                 .append("button")
-                .text( d )
-                .on("click", function() {
-                  filterGender();
-              })
+                .attr("id", `gender-btn-${text}`)
+                .text( text )
+                .style("background-color","#ffbe0b")
+                .on("click", filterGender)
             })
+            
+            function filterGender(){
+              
+              let gender = d3.select(this).text();
+              
+              if(gender == "Female") {
+                showFemale = !showFemale;
+                if(showFemale) d3.select("#gender-btn-Female").style("background-color","#ffbe0b")
+                else d3.select("#gender-btn-Female").style("background-color","#aaa")
+              }
+              if(gender == "Male") {
+                showMale = !showMale;
+                if(showMale) d3.select("#gender-btn-Male").style("background-color","#ffbe0b")
+                else d3.select("#gender-btn-Male").style("background-color","#aaa")
+              }
+              if(gender == "Clear") {
+                showFemale = true;
+                showMale = true;
+                d3.select("#gender-btn-Female").style("background-color","#ffbe0b")
+                d3.select("#gender-btn-Male").style("background-color","#ffbe0b")
+              }
+              console.log("female",showFemale)
+              console.log("male",showMale)
+              updateVic();
+
+            }
+
+
 
             //tooptip text
             function setLabelText(d, x, y) {
               label1.text("Victim age: " + d.VIC_AGE_GROUP);
               let vicRace = d.VIC_RACE == null ? "/" : d.VIC_RACE;
-              label2.text("Victim race: " + vicRace);
+              label2.text("Victim race: " + d.VIC_SEX);
               let len = vicRace.length > 8 ? vicRace.length : 8;
               boxWidth = len * 20;
 
