@@ -540,7 +540,7 @@
 
             const outerDivRaceBarChart = d3
               .select("div#RaceBarChartOuterDiv")
-              .select("h4#title");
+              .select("h5#title");
 
             const BarSvg = d3.select("svg#RaceChart");
             const BarSvgWidth = BarSvg.attr("width");
@@ -650,7 +650,7 @@
 
             const outerDivAgeBarChart = d3
               .select("div#AgeBarChartOuterDiv")
-              .select("h4#title");
+              .select("h5#title");
 
             const AgeBarSvg = d3.select("svg#AgeChart");
             const AgeBarSvgWidth = AgeBarSvg.attr("width");
@@ -783,19 +783,19 @@
 
       <div>
         <div>
-          <h6>Filter incidents by year:</h6>
+          <h5>Filter incidents by year:</h5>
           <div id="slider"></div>
         </div>
         <div>
-          <h6>Victim Age Group:</h6>
+          <h5>Victim Age Group:</h5>
           <div id="button-bar"></div>
         </div>
         <div id="RaceBarChartOuterDiv">
-          <h4 id="title"></h4>
+          <h5 id="title"></h5>
           <div id="RaceBarChart"></div>
         </div>
         <div id="AgeBarChartOuterDiv">
-          <h4 id="title"></h4>
+          <h5 id="title"></h5>
           <div id="AgeBarChart"></div>
         </div>
       </div>
