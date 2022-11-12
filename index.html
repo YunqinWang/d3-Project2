@@ -174,18 +174,15 @@
             function filterData() {
               filteredData = [];
               for (let d of incidentHistory) {
-                //console.log(d);
                 //filter year
                 if (formatYear(d.OCCUR_DATE) != selectedYear) continue;
 
                 if (!showFemale && d.VIC_SEX == "F") {
                   continue;
                 }
-                //console.log(!showMale,d.VIC_SEX == "M")
                 if (!showMale && d.VIC_SEX == "M") continue;
 
                 filteredData.push(d);
-                //console.log(filteredData.length)
               }
             }
 
@@ -272,8 +269,8 @@
                 if (!event.active) {
                   selectedYear = val.getFullYear();
                   updateVic();
-                  updateRaceBars(selectedYear);
-                  updateAgeBars(selectedYear);
+                  updateRaceBars();
+                  updateAgeBars();
                 }
               });
 
@@ -341,6 +338,8 @@
               }
 
               updateVic();
+              updateRaceBars();
+              updateAgeBars();
             }
 
             //create tooltip for hovering
@@ -493,12 +492,30 @@
               .text("Victim Age Group");
 
             ////////////////////////// Race Bar Chart Code /////////////////
+
+            function getUpdatedTitle(startingPhrase) {
+              if (showFemale && showMale) {
+                return startingPhrase + selectedYear + ", " + "Male and Female";
+              } else if (showFemale) {
+                return startingPhrase + selectedYear + ", " + "Female";
+              } else if (showMale) {
+                return startingPhrase + selectedYear + ", " + "Male";
+              } else {
+                return (
+                  startingPhrase + selectedYear + ", " + "No gender selected"
+                );
+              }
+            }
             const divRaceBarChart = d3
               .select("div#RaceBarChart")
               .append("svg")
               .attr("width", 1200)
               .attr("height", 500)
               .attr("id", "RaceChart");
+
+            const outerDivRaceBarChart = d3
+              .select("div#RaceBarChartOuterDiv")
+              .select("h4#title");
 
             const BarSvg = d3.select("svg#RaceChart");
             const BarSvgWidth = BarSvg.attr("width");
@@ -553,11 +570,13 @@
                 "transform",
                 `translate(${BarMargin.left - 10},${BarMargin.top})`
               );
-            function updateRaceBars(year) {
+            function updateRaceBars() {
+              outerDivRaceBarChart.text(
+                getUpdatedTitle("Count of Victims by Race for ")
+              );
               var raceVictimCount = {};
-              incidentHistory.forEach((d) => {
-                var date = new Date(d["OCCUR_DATE"]);
-                if (d["VIC_RACE"] && date.getFullYear() == year) {
+              filteredData.forEach((d) => {
+                if (d["VIC_RACE"]) {
                   if (d["VIC_RACE"] in raceVictimCount) {
                     raceVictimCount[d["VIC_RACE"]] += 1;
                   } else {
@@ -601,8 +620,11 @@
 
             //////////////////// Age Bar Chart Code ///////////////////////////
 
+            const outerDivAgeBarChart = d3
+              .select("div#AgeBarChartOuterDiv")
+              .select("h4#title");
+
             const AgeBarSvg = d3.select("svg#AgeChart");
-            console.log(AgeBarSvg);
             const AgeBarSvgWidth = AgeBarSvg.attr("width");
             const AgeBarSvgHeight = AgeBarSvg.attr("height");
             const AgeBarMargin = { top: 10, right: 10, bottom: 50, left: 50 };
@@ -652,10 +674,12 @@
                 `translate(${AgeBarMargin.left - 10},${AgeBarMargin.top})`
               );
             function updateAgeBars(year) {
+              outerDivAgeBarChart.text(
+                getUpdatedTitle("Count of Victims by Age for ")
+              );
               var ageVictimCount = {};
-              incidentHistory.forEach((d) => {
-                var date = new Date(d["OCCUR_DATE"]);
-                if (d["VIC_AGE_GROUP"] && date.getFullYear() == year) {
+              filteredData.forEach((d) => {
+                if (d["VIC_AGE_GROUP"]) {
                   if (d["VIC_AGE_GROUP"] in ageVictimCount) {
                     ageVictimCount[d["VIC_AGE_GROUP"]] += 1;
                   } else {
@@ -663,7 +687,6 @@
                   }
                 }
               });
-              console.log(ageVictimCount);
               var ages = [];
               var agesCount = [];
 
@@ -691,8 +714,8 @@
                 )
                 .attr("width", agesScale.bandwidth());
             }
-            updateRaceBars(2021);
-            updateAgeBars(2021);
+            updateRaceBars();
+            updateAgeBars();
           };
           requestData();
         </script>
@@ -728,12 +751,12 @@
           <h6>Victim Age Group:</h6>
           <div id="button-bar"></div>
         </div>
-        <div>
-          <h6>Count of Victims for Selected Year by Race</h6>
+        <div id="RaceBarChartOuterDiv">
+          <h4 id="title"></h4>
           <div id="RaceBarChart"></div>
         </div>
-        <div>
-          <h6>Count of Victims for Selected Year by Age Range</h6>
+        <div id="AgeBarChartOuterDiv">
+          <h4 id="title"></h4>
           <div id="AgeBarChart"></div>
         </div>
       </div>
