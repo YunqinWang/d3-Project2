@@ -519,13 +519,13 @@
               .select("div#RaceBarChart")
               .append("svg")
               .attr("width", Window_Width_Inuse*0.4)
-              .attr("height", 200)
+              .attr("height", 210)
               .attr("id", "RaceChart");
 
             const BarSvg = d3.select("svg#RaceChart");
             const BarSvgWidth = BarSvg.attr("width");
             const BarSvgHeight = BarSvg.attr("height");
-            const BarMargin = { top: 10, right: 10, bottom: 50, left: 50 };
+            const BarMargin = { top: 10, right: 10, bottom: 60, left: 50 };
             const BarChartWidth =
               BarSvgWidth - BarMargin.left - BarMargin.right;
             const BarChartHeight =
@@ -544,7 +544,8 @@
               "WHITE",
               "ASIAN / PACIFIC ISLANDER",
               "UNKNOWN",
-              "AMERICAN INDIAN/ALASKAN NATIVE",
+              // "AMERICAN INDIAN/ALASKAN NATIVE", 
+              // seems this data doesn't exist
             ];
         
             const racesScale = d3
@@ -563,11 +564,11 @@
               )
               .call(bottomAxis)
               .selectAll("text")
-              .style("text-anchor", "end")
+              .style("text-anchor", "center")
               .style("font-size", 10)
-              .attr("dx", "-.8em")
-              .attr("dy", ".15em")
-              .attr("transform", "rotate(-10)");
+              //.attr("dx", "-.8em")
+             // .attr("dy", ".15em")
+             // .attr("transform", "rotate(-10)");
 
             let leftAxis = d3.axisLeft();
             let leftAxisG = BarAnnotations.append("g")
@@ -715,6 +716,21 @@
             }
             updateRaceBars(2021);
             updateAgeBars(2021);
+
+
+            function insertLinebreaks(d) {
+                var el = d3.select(this);
+                d=d.replace(' /','/')
+                var words = d.split(' ');
+                console.log(d)
+                el.text('');
+                for (let i = 0; i < words.length; i++) {
+                    let tspan = el.append('tspan').text(words[i]);
+                    if (i > 0)
+                        tspan.attr('x', 0).attr('dy', '15');
+                }
+            };
+            divRaceBarChart.selectAll('g.x.axis g text').each(insertLinebreaks);
           };
           requestData();
         </script>
