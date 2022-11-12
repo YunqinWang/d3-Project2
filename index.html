@@ -272,6 +272,8 @@
                 if (!event.active) {
                   selectedYear = val.getFullYear();
                   updateVic();
+                  updateRaceBars(selectedYear);
+                  updateAgeBars(selectedYear);
                 }
               });
 
@@ -489,6 +491,208 @@
               .attr("x", 0)
               .attr("y", 12)
               .text("Victim Age Group");
+
+            ////////////////////////// Race Bar Chart Code /////////////////
+            const divRaceBarChart = d3
+              .select("div#RaceBarChart")
+              .append("svg")
+              .attr("width", 1200)
+              .attr("height", 500)
+              .attr("id", "RaceChart");
+
+            const BarSvg = d3.select("svg#RaceChart");
+            const BarSvgWidth = BarSvg.attr("width");
+            const BarSvgHeight = BarSvg.attr("height");
+            const BarMargin = { top: 10, right: 10, bottom: 50, left: 50 };
+            const BarChartWidth =
+              BarSvgWidth - BarMargin.left - BarMargin.right;
+            const BarChartHeight =
+              BarSvgHeight - BarMargin.top - BarMargin.bottom;
+            let BarAnnotations = BarSvg.append("g").attr("id", "annotations");
+            let BarChartArea = BarSvg.append("g")
+              .attr("id", "points")
+              .attr(
+                "transform",
+                `translate(${BarMargin.left},${BarMargin.top})`
+              );
+            var races = [
+              "BLACK",
+              "WHITE HISPANIC",
+              "BLACK HISPANIC",
+              "WHITE",
+              "ASIAN / PACIFIC ISLANDER",
+              "UNKNOWN",
+              "AMERICAN INDIAN/ALASKAN NATIVE",
+            ];
+            const racesScale = d3
+              .scaleBand()
+              .domain(races)
+              .range([0, BarChartWidth])
+              .padding(0.1);
+            let bottomAxis = d3.axisBottom(racesScale);
+            BarAnnotations.append("g")
+              .attr("class", "x axis")
+              .attr(
+                "transform",
+                `translate(${BarMargin.left},${
+                  BarChartHeight + BarMargin.top + 10
+                })`
+              )
+              .call(bottomAxis)
+              .selectAll("text")
+              .style("text-anchor", "end")
+              .style("font-size", 8)
+              .attr("dx", "-.8em")
+              .attr("dy", ".15em")
+              .attr("transform", "rotate(-10)");
+
+            let leftAxis = d3.axisLeft();
+            let leftAxisG = BarAnnotations.append("g")
+              .attr("class", "y axis")
+              .attr(
+                "transform",
+                `translate(${BarMargin.left - 10},${BarMargin.top})`
+              );
+            function updateRaceBars(year) {
+              var raceVictimCount = {};
+              incidentHistory.forEach((d) => {
+                var date = new Date(d["OCCUR_DATE"]);
+                if (d["VIC_RACE"] && date.getFullYear() == year) {
+                  if (d["VIC_RACE"] in raceVictimCount) {
+                    raceVictimCount[d["VIC_RACE"]] += 1;
+                  } else {
+                    raceVictimCount[d["VIC_RACE"]] = 0;
+                  }
+                }
+              });
+              var races = [];
+              var racesCount = [];
+
+              for (const r in raceVictimCount) {
+                races.push(r);
+                racesCount.push(raceVictimCount[r]);
+              }
+              const RaceCountScale = d3
+                .scaleLinear()
+                .domain([0, Math.max(...racesCount)])
+                .range([BarChartHeight, 0]);
+
+              leftAxis.scale(RaceCountScale);
+              leftAxisG.call(leftAxis);
+              BarChartArea.selectAll("rect.bar")
+                .data(races)
+                .join("rect")
+                .attr("class", "bar")
+                .attr("fill", "steelblue")
+                .attr("x", (d) => racesScale(d))
+                .attr("y", (d) => RaceCountScale(raceVictimCount[d]))
+                .attr(
+                  "height",
+                  (d) => RaceCountScale(0) - RaceCountScale(raceVictimCount[d])
+                )
+                .attr("width", racesScale.bandwidth());
+            }
+            const divAgeBarChart = d3
+              .select("div#AgeBarChart")
+              .append("svg")
+              .attr("width", 1200)
+              .attr("height", 500)
+              .attr("id", "AgeChart");
+
+            //////////////////// Age Bar Chart Code ///////////////////////////
+
+            const AgeBarSvg = d3.select("svg#AgeChart");
+            console.log(AgeBarSvg);
+            const AgeBarSvgWidth = AgeBarSvg.attr("width");
+            const AgeBarSvgHeight = AgeBarSvg.attr("height");
+            const AgeBarMargin = { top: 10, right: 10, bottom: 50, left: 50 };
+            const AgeBarChartWidth =
+              AgeBarSvgWidth - AgeBarMargin.left - AgeBarMargin.right;
+            const AgeBarChartHeight =
+              AgeBarSvgHeight - AgeBarMargin.top - AgeBarMargin.bottom;
+            let AgeBarAnnotations = AgeBarSvg.append("g").attr(
+              "id",
+              "Ageannotations"
+            );
+            let AgeBarChartArea = AgeBarSvg.append("g")
+              .attr("id", "Agepoints")
+              .attr(
+                "transform",
+                `translate(${AgeBarMargin.left},${AgeBarMargin.top})`
+              );
+
+            var ages = ["<18", "18-24", "25-44", "45-64", "65+"];
+            const agesScale = d3
+              .scaleBand()
+              .domain(ages)
+              .range([0, AgeBarChartWidth])
+              .padding(0.1);
+            let agebottomAxis = d3.axisBottom(agesScale);
+            AgeBarAnnotations.append("g")
+              .attr("class", "x axis")
+              .attr(
+                "transform",
+                `translate(${AgeBarMargin.left},${
+                  AgeBarChartHeight + AgeBarMargin.top + 10
+                })`
+              )
+              .call(agebottomAxis)
+              .selectAll("text")
+              .style("text-anchor", "end")
+              .style("font-size", 15)
+              .attr("dx", "-.8em")
+              .attr("dy", ".15em")
+              .attr("transform", "rotate(-10)");
+
+            let ageleftAxis = d3.axisLeft();
+            let ageleftAxisG = AgeBarAnnotations.append("g")
+              .attr("class", "y axis")
+              .attr(
+                "transform",
+                `translate(${AgeBarMargin.left - 10},${AgeBarMargin.top})`
+              );
+            function updateAgeBars(year) {
+              var ageVictimCount = {};
+              incidentHistory.forEach((d) => {
+                var date = new Date(d["OCCUR_DATE"]);
+                if (d["VIC_AGE_GROUP"] && date.getFullYear() == year) {
+                  if (d["VIC_AGE_GROUP"] in ageVictimCount) {
+                    ageVictimCount[d["VIC_AGE_GROUP"]] += 1;
+                  } else {
+                    ageVictimCount[d["VIC_AGE_GROUP"]] = 0;
+                  }
+                }
+              });
+              console.log(ageVictimCount);
+              var ages = [];
+              var agesCount = [];
+
+              for (const r in ageVictimCount) {
+                ages.push(r);
+                agesCount.push(ageVictimCount[r]);
+              }
+              const AgesCountScale = d3
+                .scaleLinear()
+                .domain([0, Math.max(...agesCount)])
+                .range([AgeBarChartHeight, 0]);
+
+              ageleftAxis.scale(AgesCountScale);
+              ageleftAxisG.call(ageleftAxis);
+              AgeBarChartArea.selectAll("rect.agebar")
+                .data(ages)
+                .join("rect")
+                .attr("class", "agebar")
+                .attr("fill", "steelblue")
+                .attr("x", (d) => agesScale(d))
+                .attr("y", (d) => AgesCountScale(ageVictimCount[d]))
+                .attr(
+                  "height",
+                  (d) => AgesCountScale(0) - AgesCountScale(ageVictimCount[d])
+                )
+                .attr("width", agesScale.bandwidth());
+            }
+            updateRaceBars(2021);
+            updateAgeBars(2021);
           };
           requestData();
         </script>
@@ -523,6 +727,14 @@
         <div>
           <h6>Victim Age Group:</h6>
           <div id="button-bar"></div>
+        </div>
+        <div>
+          <h6>Count of Victims for Selected Year by Race</h6>
+          <div id="RaceBarChart"></div>
+        </div>
+        <div>
+          <h6>Count of Victims for Selected Year by Age Range</h6>
+          <div id="AgeBarChart"></div>
         </div>
       </div>
     </div>
