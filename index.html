@@ -7,18 +7,21 @@
 
     <title>Info5100 Project2</title>
     <style>
+      html{
+        font-family: sans-serif;
+      }
+      h6{
+        margin-bottom: 5px;
+      }
       .filter {
-        display: flex;
+      
       }
-      #button {
-        margin-left: 50px;
-      }
+      
       #slider-title {
         margin-bottom: 0;
       }
       .container {
-        /* width: 75%; */
-        margin: 10px;
+        margin: 30px;
       }
 
       .map {
@@ -63,9 +66,9 @@
         margin: 5px 0px 5px 10px;
       }
 
-      #legend {
+       #legend {
         position: absolute;
-      }
+      } 
 
       .barchart {
         /* border: 1px solid black; */
@@ -77,16 +80,23 @@
     <div class="container">
       <h1>Project 2</h1>
       <h2>New York City Shooting Incidents Distribution</h2>
+      <svg id="legend" height="500" width="450"></svg>
       <div class="map">
-        <svg
-          id="NewYorkMap"
-          height="600"
-          width="600"
-          style="margin-right: 60px"
-        ></svg>
+        
+        <div id ="map-nyc">
+        </div>
 
         <script>
-          const map = d3.select("svg#NewYorkMap");
+          const Window_Width = window.screen.width;
+          const Window_Margins = 30;
+          const Window_Width_Inuse = Window_Width - 2* Window_Margins;
+          const map = d3.select("#map-nyc").append("svg")
+                        .attr("id","NewYorkMap")
+                        .attr("width", Window_Width_Inuse *0.55) 
+                        .attr("height", 820)
+                        .style("margin-right",20)
+
+          //const map = d3.select("svg#NewYorkMap");
           const width = map.attr("width");
           const height = map.attr("height");
           const margin = { top: 10, right: 10, bottom: 50, left: 50 };
@@ -100,8 +110,7 @@
           const mapLegend = map
             .append("g")
             .attr("id", "legend")
-            .attr("x", 10)
-            .attr("y", 10);
+            .attr("transform", "translate(10,30)")
 
           const requestData = async function () {
             //load map data
@@ -472,17 +481,16 @@
             const keys = ["<18", "18-24", "25-44", "45-64", "65+"];
             const legend = d3.select("#legend");
             const size = 15;
-
+            const gap = 35;
+            
             legend
               .selectAll("mydots")
               .data(keys)
               .enter()
               .append("circle")
-              .attr("cx", function (d, i) {
-                return 11 + i * 62;
-              })
-              .attr("cy", 30) // 100 is where the first dot appears. 25 is the distance between dots
-              .attr("r", 6.5)
+              .attr("cx", 11)
+              .attr("cy", (d,i)=> 36+gap*i) // 100 is where the first dot appears. 25 is the distance between dots
+              .attr("r", 6)
               .style("fill", (d) => ageColorScale(d));
 
             legend
@@ -490,10 +498,8 @@
               .data(keys)
               .enter()
               .append("text")
-              .attr("x", function (d, i) {
-                return 18 + i * 62;
-              })
-              .attr("y", 32) // 100 is where the first dot appears. 25 is the distance between dots
+              .attr("x",22)
+              .attr("y", (d,i)=> 39+gap*i) // 100 is where the first dot appears. 25 is the distance between dots
               .style("fill", (d) => ageColorScale(d))
               .text(function (d) {
                 return d;
@@ -504,14 +510,15 @@
             legend
               .append("text")
               .attr("x", 0)
-              .attr("y", 12)
-              .text("Victim Age Group");
+              .attr("y", 15)
+              .text("Victim Age Group Color Scale")
+              .style("font-size",20);
 
             ////////////////////////// Race Bar Chart Code /////////////////
             const divRaceBarChart = d3
               .select("div#RaceBarChart")
               .append("svg")
-              .attr("width", 480)
+              .attr("width", Window_Width_Inuse*0.4)
               .attr("height", 200)
               .attr("id", "RaceChart");
 
@@ -539,6 +546,7 @@
               "UNKNOWN",
               "AMERICAN INDIAN/ALASKAN NATIVE",
             ];
+            races = races.map(d=>d.charAt(0).toUpperCase()+d.slice(1).toLowerCase())
             const racesScale = d3
               .scaleBand()
               .domain(races)
@@ -556,7 +564,7 @@
               .call(bottomAxis)
               .selectAll("text")
               .style("text-anchor", "end")
-              .style("font-size", 8)
+              .style("font-size", 10)
               .attr("dx", "-.8em")
               .attr("dy", ".15em")
               .attr("transform", "rotate(-10)");
@@ -618,7 +626,6 @@
             //////////////////// Age Bar Chart Code ///////////////////////////
 
             const AgeBarSvg = d3.select("svg#AgeChart");
-            console.log(AgeBarSvg);
             const AgeBarSvgWidth = AgeBarSvg.attr("width");
             const AgeBarSvgHeight = AgeBarSvg.attr("height");
             const AgeBarMargin = { top: 10, right: 10, bottom: 50, left: 50 };
@@ -654,11 +661,10 @@
               )
               .call(agebottomAxis)
               .selectAll("text")
-              .style("text-anchor", "end")
+              .style("text-anchor", "center")
               .style("font-size", 15)
-              .attr("dx", "-.8em")
-              .attr("dy", ".15em")
-              .attr("transform", "rotate(-10)");
+              .attr("transform", "translate(0,5)")
+             
 
             let ageleftAxis = d3.axisLeft();
             let ageleftAxisG = AgeBarAnnotations.append("g")
@@ -741,23 +747,21 @@
             <h6>Count of Victims for Selected Year by Age Range</h6>
             <div id="AgeBarChart"></div>
           </div>
+          <div class="filter" >
+              <div id="button">
+                <h6>Filter incidents by gender</h6>
+                <div id="button-bar"></div>
+              </div>
+              <div>
+                <h6 id="slider-title">Filter incidents by year</h6>
+                <div id="slider"></div>
+              </div>
+          </div>
         </div>
       </div>
+      
 
-      <svg id="legend" height="50" width="450"></svg>
 
-      <div class="filter">
-        <div>
-          <h6 id="slider-title">Filter incidents by year:</h6>
-          <div id="slider"></div>
-        </div>
-        <div id="button">
-          <h6>Victim Age Group:</h6>
-          <div id="button-bar"></div>
-        </div>
-      </div>
-
-      <div></div>
     </div>
   </body>
 </html>
