@@ -7,14 +7,23 @@
 
     <title>Info5100 Project2</title>
     <style>
+      .filter {
+        display: flex;
+      }
+      #button {
+        margin-left: 50px;
+      }
+      #slider-title {
+        margin-bottom: 0;
+      }
       .container {
-        width: 75%;
-        margin: auto;
+        /* width: 75%; */
+        margin: 10px;
       }
 
       .map {
         display: flex;
-        align-items: flex-end;
+        align-items: space-around;
       }
 
       .map div {
@@ -54,8 +63,12 @@
         margin: 5px 0px 5px 10px;
       }
 
-      .legend {
-        display: flex;
+      #legend {
+        position: absolute;
+      }
+
+      .barchart {
+        /* border: 1px solid black; */
       }
     </style>
   </head>
@@ -63,12 +76,12 @@
   <body>
     <div class="container">
       <h1>Project 2</h1>
-      <h2>New York City Incident Distribution</h2>
+      <h2>New York City Shooting Incidents Distribution</h2>
       <div class="map">
         <svg
           id="NewYorkMap"
-          height="800"
-          width="800"
+          height="600"
+          width="600"
           style="margin-right: 60px"
         ></svg>
 
@@ -84,6 +97,11 @@
             .append("g")
             .attr("id", "points")
             .attr("transform", `translate(${margin.left},${margin.top})`);
+          const mapLegend = map
+            .append("g")
+            .attr("id", "legend")
+            .attr("x", 10)
+            .attr("y", 10);
 
           const requestData = async function () {
             //load map data
@@ -106,6 +124,7 @@
               .attr("class", "polygon")
               .attr("d", path)
               .attr("stroke", "grey");
+
             //zoom
             const zoom = d3
               .zoom()
@@ -119,11 +138,12 @@
             function zoomIn(event) {
               mapArea.attr("transform", event.transform);
               wholeMap.attr("stroke-width", `${1 / event.transform.k}px`);
+              vic.attr("r", 3 / event.transform.k);
             }
 
             // vicitm circle size
-            const Victim_Circle_Size_Initial = 4;
-            const Victim_Circle_Size_Hover = 12;
+            const Victim_Circle_Size_Initial = 3;
+            const Victim_Circle_Size_Hover = 10;
             const Inactive_Victim_Opa = 0.5;
 
             // age color scale
@@ -174,22 +194,21 @@
             function filterData() {
               filteredData = [];
               for (let d of incidentHistory) {
-                //console.log(d);
                 //filter year
-                if (formatYear(d.OCCUR_DATE) != selectedYear) continue;
-
+                if (formatYear(d.OCCUR_DATE) != selectedYear) continue; //剩下2011
+                // console.log(!showFemale, d.VIC_SEX == "F");
                 if (!showFemale && d.VIC_SEX == "F") {
                   continue;
                 }
-                //console.log(!showMale,d.VIC_SEX == "M")
+                // console.log(!showMale, d.VIC_SEX == "M");
                 if (!showMale && d.VIC_SEX == "M") continue;
 
                 filteredData.push(d);
-                //console.log(filteredData.length)
               }
             }
 
             // draw initial circles for victs
+
             filterData();
             let vic = mapArea
               .selectAll("circle")
@@ -206,6 +225,7 @@
               .attr("opacity", Inactive_Victim_Opa)
               .on("mouseover", hoverVictim)
               .on("mouseout", leaveVictim);
+
             // call updateVic after change a selection or drag the slider
             function updateVic() {
               filterData();
@@ -270,6 +290,7 @@
               .default(new Date(timeExtent[1], 01, 01))
               .on("end", (val) => {
                 if (!event.active) {
+                  console.log(val);
                   selectedYear = val.getFullYear();
                   updateVic();
                   updateRaceBars(selectedYear);
@@ -292,13 +313,14 @@
                 .attr("id", `gender-btn-${text}`)
                 .text(text)
                 .style("background-color", Active_Btn_Color)
+                .style("margin-right", "10px")
+                .style("border-radius", "5px")
                 .on("click", filterGender);
             });
 
             //set gender btn color and update dots
             function filterGender() {
               let gender = d3.select(this).text();
-
               if (gender == "Female") {
                 showFemale = !showFemale;
                 if (showFemale)
@@ -307,10 +329,7 @@
                     Active_Btn_Color
                   );
                 else
-                  d3.select("#gender-btn-Female").style(
-                    "background-color",
-                    Inactive_Btn_Color
-                  );
+                  d3.select("#gender-btn-Female").style("background", "none");
               }
 
               if (gender == "Male") {
@@ -320,11 +339,7 @@
                     "background-color",
                     Active_Btn_Color
                   );
-                else
-                  d3.select("#gender-btn-Male").style(
-                    "background-color",
-                    Inactive_Btn_Color
-                  );
+                else d3.select("#gender-btn-Male").style("background", "none");
               }
 
               if (gender == "Clear") {
@@ -394,11 +409,11 @@
                 .attr("width", boxWidth)
                 .style("opacity", 0.5);
 
-              document.getElementById("info-date").innerHTML = d.OCCUR_DATE;
-              document.getElementById("info-gender").innerHTML =
-                d.PERP_SEX == "F" ? "Female" : "Male";
-              document.getElementById("info-race").innerHTML = d.VIC_RACE;
-              document.getElementById("info-age").innerHTML = d.VIC_AGE_GROUP;
+              // document.getElementById("info-date").innerHTML = d.OCCUR_DATE;
+              // document.getElementById("info-gender").innerHTML =
+              //   d.PERP_SEX == "F" ? "Female" : "Male";
+              // document.getElementById("info-race").innerHTML = d.VIC_RACE;
+              // document.getElementById("info-age").innerHTML = d.VIC_AGE_GROUP;
             }
 
             // remove tooltip
@@ -406,10 +421,10 @@
               labelBox.style("opacity", 0);
               label1.text("");
               label2.text("");
-              document.getElementById("info-date").innerHTML = "";
-              document.getElementById("info-gender").innerHTML = "";
-              document.getElementById("info-race").innerHTML = "";
-              document.getElementById("info-age").innerHTML = "";
+              // document.getElementById("info-date").innerHTML = "";
+              // document.getElementById("info-gender").innerHTML = "";
+              // document.getElementById("info-race").innerHTML = "";
+              // document.getElementById("info-age").innerHTML = "";
             }
 
             //hover on victim dot, show tooltip
@@ -454,7 +469,7 @@
             }
 
             //draw age legend
-            const keys = ["0-17", "18-24", "25-44", "45-64", "65+"];
+            const keys = ["<18", "18-24", "25-44", "45-64", "65+"];
             const legend = d3.select("#legend");
             const size = 15;
 
@@ -496,8 +511,8 @@
             const divRaceBarChart = d3
               .select("div#RaceBarChart")
               .append("svg")
-              .attr("width", 1200)
-              .attr("height", 500)
+              .attr("width", 480)
+              .attr("height", 200)
               .attr("id", "RaceChart");
 
             const BarSvg = d3.select("svg#RaceChart");
@@ -572,6 +587,7 @@
                 races.push(r);
                 racesCount.push(raceVictimCount[r]);
               }
+
               const RaceCountScale = d3
                 .scaleLinear()
                 .domain([0, Math.max(...racesCount)])
@@ -595,8 +611,8 @@
             const divAgeBarChart = d3
               .select("div#AgeBarChart")
               .append("svg")
-              .attr("width", 1200)
-              .attr("height", 500)
+              .attr("width", 480)
+              .attr("height", 200)
               .attr("id", "AgeChart");
 
             //////////////////// Age Bar Chart Code ///////////////////////////
@@ -682,7 +698,7 @@
                 .data(ages)
                 .join("rect")
                 .attr("class", "agebar")
-                .attr("fill", "steelblue")
+                .attr("fill", (d) => ageColorScale(d))
                 .attr("x", (d) => agesScale(d))
                 .attr("y", (d) => AgesCountScale(ageVictimCount[d]))
                 .attr(
@@ -697,7 +713,7 @@
           requestData();
         </script>
 
-        <div class="info">
+        <!-- <div class="info">
           <div>
             <h6>Date of incident:</h6>
             <p id="info-date"></p>
@@ -714,29 +730,34 @@
             <h6>Victim Age:</h6>
             <p id="info-age"></p>
           </div>
+        </div> -->
+
+        <div class="barchart">
+          <div>
+            <h6>Count of Victims for Selected Year by Race</h6>
+            <div id="RaceBarChart"></div>
+          </div>
+          <div>
+            <h6>Count of Victims for Selected Year by Age Range</h6>
+            <div id="AgeBarChart"></div>
+          </div>
         </div>
       </div>
-      <svg id="legend" height="50" width="450"></svg>
-      <div class="legend"></div>
 
-      <div>
+      <svg id="legend" height="50" width="450"></svg>
+
+      <div class="filter">
         <div>
-          <h6>Filter incidents by year:</h6>
+          <h6 id="slider-title">Filter incidents by year:</h6>
           <div id="slider"></div>
         </div>
-        <div>
+        <div id="button">
           <h6>Victim Age Group:</h6>
           <div id="button-bar"></div>
         </div>
-        <div>
-          <h6>Count of Victims for Selected Year by Race</h6>
-          <div id="RaceBarChart"></div>
-        </div>
-        <div>
-          <h6>Count of Victims for Selected Year by Age Range</h6>
-          <div id="AgeBarChart"></div>
-        </div>
       </div>
+
+      <div></div>
     </div>
   </body>
 </html>
