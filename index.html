@@ -7,14 +7,27 @@
 
     <title>Info5100 Project2</title>
     <style>
+      html{
+        font-family: sans-serif;
+      }
+      h6{
+        margin-top: 25px;
+        margin-bottom: 8px;
+      }
+      .filter {
+      
+      }
+      
+      #slider-title {
+        margin-bottom: 0;
+      }
       .container {
-        width: 75%;
-        margin: auto;
+        margin: 30px;
       }
 
       .map {
         display: flex;
-        align-items: flex-end;
+        align-items: space-around;
       }
 
       .map div {
@@ -54,8 +67,12 @@
         margin: 5px 0px 5px 10px;
       }
 
-      .legend {
-        display: flex;
+       #legend {
+        position: absolute;
+      } 
+
+      .barchart {
+        /* border: 1px solid black; */
       }
     </style>
   </head>
@@ -63,17 +80,24 @@
   <body>
     <div class="container">
       <h1>Project 2</h1>
-      <h2>New York City Incident Distribution</h2>
+      <h2>New York City Shooting Incidents Distribution</h2>
+      <svg id="legend" height="500" width="450"></svg>
       <div class="map">
-        <svg
-          id="NewYorkMap"
-          height="800"
-          width="800"
-          style="margin-right: 60px"
-        ></svg>
+        
+        <div id ="map-nyc">
+        </div>
 
         <script>
-          const map = d3.select("svg#NewYorkMap");
+          const Window_Width = window.screen.width;
+          const Window_Margins = 30;
+          const Window_Width_Inuse = Window_Width - 2* Window_Margins;
+          const map = d3.select("#map-nyc").append("svg")
+                        .attr("id","NewYorkMap")
+                        .attr("width", Window_Width_Inuse *0.55) 
+                        .attr("height", 800)
+                        .style("margin-right",20)
+
+          //const map = d3.select("svg#NewYorkMap");
           const width = map.attr("width");
           const height = map.attr("height");
           const margin = { top: 10, right: 10, bottom: 50, left: 50 };
@@ -84,6 +108,10 @@
             .append("g")
             .attr("id", "points")
             .attr("transform", `translate(${margin.left},${margin.top})`);
+          const mapLegend = map
+            .append("g")
+            .attr("id", "legend")
+            .attr("transform", "translate(10,30)")
 
           const requestData = async function () {
             //load map data
@@ -106,6 +134,7 @@
               .attr("class", "polygon")
               .attr("d", path)
               .attr("stroke", "grey");
+
             //zoom
             const zoom = d3
               .zoom()
@@ -119,11 +148,12 @@
             function zoomIn(event) {
               mapArea.attr("transform", event.transform);
               wholeMap.attr("stroke-width", `${1 / event.transform.k}px`);
+              vic.attr("r", 3 / event.transform.k);
             }
 
             // vicitm circle size
-            const Victim_Circle_Size_Initial = 4;
-            const Victim_Circle_Size_Hover = 12;
+            const Victim_Circle_Size_Initial = 3;
+            const Victim_Circle_Size_Hover = 10;
             const Inactive_Victim_Opa = 0.5;
 
             // age color scale
@@ -175,8 +205,8 @@
               filteredData = [];
               for (let d of incidentHistory) {
                 //filter year
-                if (formatYear(d.OCCUR_DATE) != selectedYear) continue;
-
+                if (formatYear(d.OCCUR_DATE) != selectedYear) continue; //剩下2011
+                // console.log(!showFemale, d.VIC_SEX == "F");
                 if (!showFemale && d.VIC_SEX == "F") {
                   continue;
                 }
@@ -187,6 +217,7 @@
             }
 
             // draw initial circles for victs
+
             filterData();
             let vic = mapArea
               .selectAll("circle")
@@ -203,6 +234,7 @@
               .attr("opacity", Inactive_Victim_Opa)
               .on("mouseover", hoverVictim)
               .on("mouseout", leaveVictim);
+
             // call updateVic after change a selection or drag the slider
             function updateVic() {
               filterData();
@@ -267,6 +299,7 @@
               .default(new Date(timeExtent[1], 01, 01))
               .on("end", (val) => {
                 if (!event.active) {
+                  console.log(val);
                   selectedYear = val.getFullYear();
                   updateVic();
                   updateRaceBars();
@@ -289,13 +322,14 @@
                 .attr("id", `gender-btn-${text}`)
                 .text(text)
                 .style("background-color", Active_Btn_Color)
+                .style("margin-right", "10px")
+                .style("border-radius", "5px")
                 .on("click", filterGender);
             });
 
             //set gender btn color and update dots
             function filterGender() {
               let gender = d3.select(this).text();
-
               if (gender == "Female") {
                 showFemale = !showFemale;
                 if (showFemale)
@@ -304,10 +338,7 @@
                     Active_Btn_Color
                   );
                 else
-                  d3.select("#gender-btn-Female").style(
-                    "background-color",
-                    Inactive_Btn_Color
-                  );
+                  d3.select("#gender-btn-Female").style("background", "none");
               }
 
               if (gender == "Male") {
@@ -317,11 +348,7 @@
                     "background-color",
                     Active_Btn_Color
                   );
-                else
-                  d3.select("#gender-btn-Male").style(
-                    "background-color",
-                    Inactive_Btn_Color
-                  );
+                else d3.select("#gender-btn-Male").style("background", "none");
               }
 
               if (gender == "Clear") {
@@ -393,11 +420,11 @@
                 .attr("width", boxWidth)
                 .style("opacity", 0.5);
 
-              document.getElementById("info-date").innerHTML = d.OCCUR_DATE;
-              document.getElementById("info-gender").innerHTML =
-                d.PERP_SEX == "F" ? "Female" : "Male";
-              document.getElementById("info-race").innerHTML = d.VIC_RACE;
-              document.getElementById("info-age").innerHTML = d.VIC_AGE_GROUP;
+              // document.getElementById("info-date").innerHTML = d.OCCUR_DATE;
+              // document.getElementById("info-gender").innerHTML =
+              //   d.PERP_SEX == "F" ? "Female" : "Male";
+              // document.getElementById("info-race").innerHTML = d.VIC_RACE;
+              // document.getElementById("info-age").innerHTML = d.VIC_AGE_GROUP;
             }
 
             // remove tooltip
@@ -405,10 +432,10 @@
               labelBox.style("opacity", 0);
               label1.text("");
               label2.text("");
-              document.getElementById("info-date").innerHTML = "";
-              document.getElementById("info-gender").innerHTML = "";
-              document.getElementById("info-race").innerHTML = "";
-              document.getElementById("info-age").innerHTML = "";
+              // document.getElementById("info-date").innerHTML = "";
+              // document.getElementById("info-gender").innerHTML = "";
+              // document.getElementById("info-race").innerHTML = "";
+              // document.getElementById("info-age").innerHTML = "";
             }
 
             //hover on victim dot, show tooltip
@@ -453,20 +480,19 @@
             }
 
             //draw age legend
-            const keys = ["0-17", "18-24", "25-44", "45-64", "65+"];
+            const keys = ["<18", "18-24", "25-44", "45-64", "65+"];
             const legend = d3.select("#legend");
             const size = 15;
-
+            const gap = 35;
+            
             legend
               .selectAll("mydots")
               .data(keys)
               .enter()
               .append("circle")
-              .attr("cx", function (d, i) {
-                return 11 + i * 62;
-              })
-              .attr("cy", 30) // 100 is where the first dot appears. 25 is the distance between dots
-              .attr("r", 6.5)
+              .attr("cx", 11)
+              .attr("cy", (d,i)=> 36+gap*i) // 100 is where the first dot appears. 25 is the distance between dots
+              .attr("r", 6)
               .style("fill", (d) => ageColorScale(d));
 
             legend
@@ -474,10 +500,8 @@
               .data(keys)
               .enter()
               .append("text")
-              .attr("x", function (d, i) {
-                return 18 + i * 62;
-              })
-              .attr("y", 32) // 100 is where the first dot appears. 25 is the distance between dots
+              .attr("x",22)
+              .attr("y", (d,i)=> 39+gap*i) // 100 is where the first dot appears. 25 is the distance between dots
               .style("fill", (d) => ageColorScale(d))
               .text(function (d) {
                 return d;
@@ -488,8 +512,9 @@
             legend
               .append("text")
               .attr("x", 0)
-              .attr("y", 12)
-              .text("Victim Age Group");
+              .attr("y", 15)
+              .text("Victim Age Group Color Scale")
+              .style("font-size",20);
 
             ////////////////////////// Race Bar Chart Code /////////////////
 
@@ -509,8 +534,8 @@
             const divRaceBarChart = d3
               .select("div#RaceBarChart")
               .append("svg")
-              .attr("width", 1200)
-              .attr("height", 500)
+              .attr("width", Window_Width_Inuse*0.4)
+              .attr("height", 210)
               .attr("id", "RaceChart");
 
             const outerDivRaceBarChart = d3
@@ -520,7 +545,7 @@
             const BarSvg = d3.select("svg#RaceChart");
             const BarSvgWidth = BarSvg.attr("width");
             const BarSvgHeight = BarSvg.attr("height");
-            const BarMargin = { top: 10, right: 10, bottom: 50, left: 50 };
+            const BarMargin = { top: 10, right: 10, bottom: 60, left: 50 };
             const BarChartWidth =
               BarSvgWidth - BarMargin.left - BarMargin.right;
             const BarChartHeight =
@@ -539,8 +564,10 @@
               "WHITE",
               "ASIAN / PACIFIC ISLANDER",
               "UNKNOWN",
-              "AMERICAN INDIAN/ALASKAN NATIVE",
+              // "AMERICAN INDIAN/ALASKAN NATIVE", 
+              // seems this data doesn't exist
             ];
+        
             const racesScale = d3
               .scaleBand()
               .domain(races)
@@ -557,11 +584,11 @@
               )
               .call(bottomAxis)
               .selectAll("text")
-              .style("text-anchor", "end")
-              .style("font-size", 8)
-              .attr("dx", "-.8em")
-              .attr("dy", ".15em")
-              .attr("transform", "rotate(-10)");
+              .style("text-anchor", "center")
+              .style("font-size", 10)
+              //.attr("dx", "-.8em")
+             // .attr("dy", ".15em")
+             // .attr("transform", "rotate(-10)");
 
             let leftAxis = d3.axisLeft();
             let leftAxisG = BarAnnotations.append("g")
@@ -591,6 +618,7 @@
                 races.push(r);
                 racesCount.push(raceVictimCount[r]);
               }
+
               const RaceCountScale = d3
                 .scaleLinear()
                 .domain([0, Math.max(...racesCount)])
@@ -614,8 +642,8 @@
             const divAgeBarChart = d3
               .select("div#AgeBarChart")
               .append("svg")
-              .attr("width", 1200)
-              .attr("height", 500)
+              .attr("width", 480)
+              .attr("height", 200)
               .attr("id", "AgeChart");
 
             //////////////////// Age Bar Chart Code ///////////////////////////
@@ -660,11 +688,10 @@
               )
               .call(agebottomAxis)
               .selectAll("text")
-              .style("text-anchor", "end")
+              .style("text-anchor", "center")
               .style("font-size", 15)
-              .attr("dx", "-.8em")
-              .attr("dy", ".15em")
-              .attr("transform", "rotate(-10)");
+              .attr("transform", "translate(0,5)")
+             
 
             let ageleftAxis = d3.axisLeft();
             let ageleftAxisG = AgeBarAnnotations.append("g")
@@ -705,7 +732,7 @@
                 .data(ages)
                 .join("rect")
                 .attr("class", "agebar")
-                .attr("fill", "steelblue")
+                .attr("fill", (d) => ageColorScale(d))
                 .attr("x", (d) => agesScale(d))
                 .attr("y", (d) => AgesCountScale(ageVictimCount[d]))
                 .attr(
@@ -716,11 +743,26 @@
             }
             updateRaceBars();
             updateAgeBars();
+
+
+            function insertLinebreaks(d) {
+                var el = d3.select(this);
+                d=d.replace(' /','/')
+                var words = d.split(' ');
+                console.log(d)
+                el.text('');
+                for (let i = 0; i < words.length; i++) {
+                    let tspan = el.append('tspan').text(words[i]);
+                    if (i > 0)
+                        tspan.attr('x', 0).attr('dy', '15');
+                }
+            };
+            divRaceBarChart.selectAll('g.x.axis g text').each(insertLinebreaks);
           };
           requestData();
         </script>
 
-        <div class="info">
+        <!-- <div class="info">
           <div>
             <h6>Date of incident:</h6>
             <p id="info-date"></p>
@@ -737,10 +779,7 @@
             <h6>Victim Age:</h6>
             <p id="info-age"></p>
           </div>
-        </div>
-      </div>
-      <svg id="legend" height="50" width="450"></svg>
-      <div class="legend"></div>
+        </div> -->
 
       <div>
         <div>
