@@ -10,7 +10,7 @@
       html{
         font-family: sans-serif;
       }
-      h6{
+      h6, h5{
         margin-top: 25px;
         margin-bottom: 8px;
       }
@@ -44,7 +44,7 @@
         fill: none;
       }
 
-      #label {
+      .label {
         font-size: 16px;
       }
 
@@ -58,7 +58,7 @@
         height: 50px;
       }
 
-      .info h6 {
+      .info h5 {
         margin: 5px 0;
       }
 
@@ -70,10 +70,6 @@
        #legend {
         position: absolute;
       } 
-
-      .barchart {
-        /* border: 1px solid black; */
-      }
     </style>
   </head>
 
@@ -135,39 +131,10 @@
               .attr("d", path)
               .attr("stroke", "grey");
 
-            //zoom
-            const zoom = d3
-              .zoom()
-              .scaleExtent([1, 10])
-              .translateExtent([
-                [-300, -300],
-                [mapWidth, mapHeight],
-              ])
-              .on("zoom", zoomIn);
-
-            map.call(zoom);
-            function zoomIn(event) {
-              mapArea.attr("transform", event.transform);
-              wholeMap.attr("stroke-width", `${1 / event.transform.k}px`);
-              vic.attr("r", 3 / event.transform.k);  
-              vic.on("mouseover",function(){
-                d3.select(this).transition()
-                .duration(200)
-                .attr("opacity", 1)
-                .attr("r", 8 / event.transform.k)
-              })
-              vic.on("mouseout",function(){
-                d3.select(this)
-                .transition()
-                .duration(200)
-                .attr("opacity", 0.5)
-                .attr("r", 3 / event.transform.k)
-                ;
-              })
-            }
+           
 
             // vicitm circle size
-            const Victim_Circle_Size_Initial = 3;
+            const Victim_Circle_Size_Initial = 4;
             const Victim_Circle_Size_Hover = 10;
             const Inactive_Victim_Opa = 0.5;
 
@@ -220,36 +187,29 @@
               filteredData = [];
               for (let d of incidentHistory) {
                 //filter year
-                if (formatYear(d.OCCUR_DATE) != selectedYear) continue; //剩下2011
-                // console.log(!showFemale, d.VIC_SEX == "F");
-                if (!showFemale && d.VIC_SEX == "F") {
-                  continue;
-                }
+                if (formatYear(d.OCCUR_DATE) != selectedYear) continue;
+                if (!showFemale && d.VIC_SEX == "F") continue;
                 if (!showMale && d.VIC_SEX == "M") continue;
 
                 filteredData.push(d);
               }
             }
-
+            let zoomTransform={k:1.0,x:margin.left,y:margin.top};
             // draw initial circles for victs
-
             filterData();
             let vic = mapArea
               .selectAll("circle")
               .data(filteredData)
               .join("circle")
               .attr("class", "incident")
-              .attr("cx", (d) => mapProjection([d.Longitude, d.Latitude])[0])
-              .attr(
-                "cy",
-                (d) => mapProjection([d.Longitude, d.Latitude])[1] + jitter()
-              )
+              .attr("cx", d => mapProjection([d.Longitude, d.Latitude])[0])
+              .attr("cy",d => mapProjection([d.Longitude, d.Latitude])[1])
               .attr("r", Victim_Circle_Size_Initial)
-              .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
+              .style("fill", d => ageColorScale(d.VIC_AGE_GROUP))
               .attr("opacity", Inactive_Victim_Opa)
+              .on("zoom",zoomIn)
               .on("mouseover", hoverVictim)
               .on("mouseout", leaveVictim)
-              .on("zoom",zoomIn);
 
             // call updateVic after change a selection or drag the slider
             function updateVic() {
@@ -262,16 +222,10 @@
                     enter
                       .append("circle")
                       .attr("class", "incident")
-                      .attr(
-                        "cx",
-                        (d) => mapProjection([d.Longitude, d.Latitude])[0]
-                      )
-                      .attr(
-                        "cy",
-                        (d) => mapProjection([d.Longitude, d.Latitude])[1]
-                      )
-                      .attr("r", Victim_Circle_Size_Initial)
-                      .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
+                      .attr("cx",d => mapProjection([d.Longitude, d.Latitude])[0])
+                      .attr("cy",d => mapProjection([d.Longitude, d.Latitude])[1])
+                      .attr("r", Victim_Circle_Size_Initial/zoomTransform.k)
+                      .style("fill", d => ageColorScale(d.VIC_AGE_GROUP))
                       .attr("opacity", Inactive_Victim_Opa)
                       .on("mouseover", hoverVictim)
                       .on("mouseout", leaveVictim)
@@ -282,25 +236,37 @@
                     update.call((update) =>
                       update
                         .attr("class", "incident")
-                        .attr(
-                          "cx",
-                          (d) => mapProjection([d.Longitude, d.Latitude])[0]
-                        )
-                        .attr(
-                          "cy",
-                          (d) => mapProjection([d.Longitude, d.Latitude])[1]
-                        )
-                        .attr("r", Victim_Circle_Size_Initial)
+                        .attr("cx",d => mapProjection([d.Longitude, d.Latitude])[0])
+                        .attr("cy",d => mapProjection([d.Longitude, d.Latitude])[1] )
+                        .attr("r", Victim_Circle_Size_Initial/zoomTransform.k)
                         .on("mouseover", hoverVictim)
                         .on("mouseout", leaveVictim)
-                        .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
+                        .style("fill", d => ageColorScale(d.VIC_AGE_GROUP))
                         .attr("opacity", Inactive_Victim_Opa)
                     ),
                   (exit) =>
-                    exit.call((exit) =>
-                      exit.transition().attr("opacity", 0).remove()
-                    )
+                    exit.call((exit) =>exit.transition().attr("opacity", 0).remove())
                 );
+            }
+            
+            //zoom
+            const zoom = d3
+              .zoom()
+              .scaleExtent([1, 10])
+              .translateExtent([
+                [-300, -300],
+                [mapWidth, mapHeight],
+              ])
+              .on("zoom", zoomIn);
+
+            map.call(zoom);
+
+            function zoomIn(event) {
+              //set global let zoomTransform;
+              zoomTransform = event.transform;
+              wholeMap.attr("stroke-width", 1 / event.transform.k);
+              mapArea.attr("transform", event.transform)
+                     .selectAll("circle").attr("r", Victim_Circle_Size_Initial / event.transform.k)
             }
 
             //use sliderBar to control which year of victims are drawn
@@ -315,7 +281,6 @@
               .default(new Date(timeExtent[1], 01, 01))
               .on("end", (val) => {
                 if (!event.active) {
-                  console.log(val);
                   selectedYear = val.getFullYear();
                   updateVic();
                   updateRaceBars();
@@ -396,18 +361,15 @@
 
             let label1 = layerText
               .append("text")
-              .attr("id", "label")
-              .attr("x", "10")
-              .attr("y", "10")
-              .style("fill", "#fff")
-              .attr("text-anchor", "middle")
-              .attr("alignment-baseline", "middle");
             let label2 = layerText
               .append("text")
-              .attr("id", "label")
+              
+            layerText.selectAll("text")
+              .attr("class", "label")
               .style("fill", "#fff")
               .attr("text-anchor", "middle")
               .attr("alignment-baseline", "middle");
+
             let boxHeight = 0;
             let boxWidth = 0;
 
@@ -421,26 +383,22 @@
 
               //set box width based on string length
               let len = vicRace.length > 8 ? vicRace.length : 8;
-              boxWidth = len * 20;
+              boxWidth = len * 15+30;
 
               //handle edge case so that tooltips for dots close to boundary don't get cropped
-              let offsetY = y < 50 ? 100 : 0;
+              let offsetY = y < 50 ? 100 : -10;
               let offsetX = x > 750 ? -50 : 0;
 
-              label1.attr("x", x + offsetX).attr("y", y - 27 + offsetY);
-              label2.attr("x", x + offsetX).attr("y", y - 10 + offsetY);
+              label1.attr("x", 0).attr("y", - 27);
+              label2.attr("x", 0).attr("y", - 10);
 
               labelBox
-                .attr("x", x - boxWidth / 2.0 + offsetX)
-                .attr("y", y - 30 - 15 + offsetY)
+                .attr("x",  - boxWidth / 2.0)
+                .attr("y", - 30 - 15 )
                 .attr("width", boxWidth)
                 .style("opacity", 0.5);
 
-              // document.getElementById("info-date").innerHTML = d.OCCUR_DATE;
-              // document.getElementById("info-gender").innerHTML =
-              //   d.PERP_SEX == "F" ? "Female" : "Male";
-              // document.getElementById("info-race").innerHTML = d.VIC_RACE;
-              // document.getElementById("info-age").innerHTML = d.VIC_AGE_GROUP;
+              layerText.attr("transform",`translate(${offsetX+x},${offsetY+y-10})`);
             }
 
             // remove tooltip
@@ -448,38 +406,30 @@
               labelBox.style("opacity", 0);
               label1.text("");
               label2.text("");
-              // document.getElementById("info-date").innerHTML = "";
-              // document.getElementById("info-gender").innerHTML = "";
-              // document.getElementById("info-race").innerHTML = "";
-              // document.getElementById("info-age").innerHTML = "";
             }
-
+            
             //hover on victim dot, show tooltip
-            function hoverVictim(event, d) {
-              let year = formatYear(d.OCCUR_DATE);
-              if (year != selectedYear) return;
+            function hoverVictim(event,d) {
 
-              let x = Number(d3.select(this).attr("cx")) + 50;
-              let y = Number(d3.select(this).attr("cy"));
+              //scale factor
+              let factor = zoomTransform.k;
 
+              let x = (Number(d3.select(this).attr("cx")))*factor + zoomTransform.x;
+              let y = Number(d3.select(this).attr("cy"))*factor+ zoomTransform.y;
+          
+              //y = d3.zoomTransform(y);
               setLabelText(d, x, y);
 
               d3.select(this)
                 .transition()
                 .duration(200)
                 .attr("opacity", 1)
-                .attr("r", Victim_Circle_Size_Hover)
-
+                .attr("r", Victim_Circle_Size_Hover/factor)
             }
 
-
-
-            
-
-            
-
             //leave victim dot, clear tooltip
-            function leaveVictim(event, d) {
+            function leaveVictim(event, d) {      
+              let factor = zoomTransform.k
               let year = formatYear(d.OCCUR_DATE);
               if (year != selectedYear) return;
 
@@ -488,13 +438,8 @@
                 .transition()
                 .duration(200)
                 .attr("opacity", 0.5)
-                .attr("r", Victim_Circle_Size_Initial)
+                .attr("r", Victim_Circle_Size_Initial/factor)
                 ;
-            }
-
-            //generate random number between -4 and 4
-            function jitter() {
-              return Math.random() * 8 - 4;
             }
 
             //get year from the date
@@ -588,8 +533,6 @@
               "WHITE",
               "ASIAN / PACIFIC ISLANDER",
               "UNKNOWN",
-              // "AMERICAN INDIAN/ALASKAN NATIVE", 
-              // seems this data doesn't exist
             ];
         
             const racesScale = d3
@@ -773,7 +716,6 @@
                 var el = d3.select(this);
                 d=d.replace(' /','/')
                 var words = d.split(' ');
-                console.log(d)
                 el.text('');
                 for (let i = 0; i < words.length; i++) {
                     let tspan = el.append('tspan').text(words[i]);
@@ -785,42 +727,25 @@
           };
           requestData();
         </script>
-
-        <!-- <div class="info">
-          <div>
-            <h6>Date of incident:</h6>
-            <p id="info-date"></p>
-          </div>
-          <div>
-            <h6>Victim Gender:</h6>
-            <p id="info-gender"></p>
-          </div>
-          <div>
-            <h6>Victim Race:</h6>
-            <p id="info-race"></p>
-          </div>
-          <div>
-            <h6>Victim Age:</h6>
-            <p id="info-age"></p>
-          </div>
-        </div> -->
-
-      <div>
         <div>
-          <h5>Filter incidents by year:</h5>
-          <div id="slider"></div>
-        </div>
-        <div>
-          <h5>Victim Age Group:</h5>
-          <div id="button-bar"></div>
-        </div>
-        <div id="RaceBarChartOuterDiv">
-          <h5 id="title"></h5>
-          <div id="RaceBarChart"></div>
-        </div>
-        <div id="AgeBarChartOuterDiv">
-          <h5 id="title"></h5>
-          <div id="AgeBarChart"></div>
+          <div>
+            <h5>Victim Age Group:</h5>
+            <div id="button-bar"></div>
+          </div>
+          <div>
+            <h5>Filter incidents by year:</h5>
+            <div id="slider"></div>
+          </div>
+          <div id="RaceBarChartOuterDiv">
+            <h5 id="title"></h5>
+            <div id="RaceBarChart"></div>
+          </div>
+          <div id="AgeBarChartOuterDiv">
+            <h5 id="title"></h5>
+            <div id="AgeBarChart"></div>
+          </div>
+          
+          
         </div>
       </div>
     </div>
