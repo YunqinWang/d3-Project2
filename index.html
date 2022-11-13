@@ -144,11 +144,26 @@
                 [mapWidth, mapHeight],
               ])
               .on("zoom", zoomIn);
+
             map.call(zoom);
             function zoomIn(event) {
               mapArea.attr("transform", event.transform);
               wholeMap.attr("stroke-width", `${1 / event.transform.k}px`);
-              vic.attr("r", 3 / event.transform.k);
+              vic.attr("r", 3 / event.transform.k);  
+              vic.on("mouseover",function(){
+                d3.select(this).transition()
+                .duration(200)
+                .attr("opacity", 1)
+                .attr("r", 8 / event.transform.k)
+              })
+              vic.on("mouseout",function(){
+                d3.select(this)
+                .transition()
+                .duration(200)
+                .attr("opacity", 0.5)
+                .attr("r", 3 / event.transform.k)
+                ;
+              })
             }
 
             // vicitm circle size
@@ -233,7 +248,8 @@
               .style("fill", (d) => ageColorScale(d.VIC_AGE_GROUP))
               .attr("opacity", Inactive_Victim_Opa)
               .on("mouseover", hoverVictim)
-              .on("mouseout", leaveVictim);
+              .on("mouseout", leaveVictim)
+              .on("zoom",zoomIn);
 
             // call updateVic after change a selection or drag the slider
             function updateVic() {
@@ -452,8 +468,15 @@
                 .transition()
                 .duration(200)
                 .attr("opacity", 1)
-                .attr("r", Victim_Circle_Size_Hover);
+                .attr("r", Victim_Circle_Size_Hover)
+
             }
+
+
+
+            
+
+            
 
             //leave victim dot, clear tooltip
             function leaveVictim(event, d) {
@@ -465,7 +488,8 @@
                 .transition()
                 .duration(200)
                 .attr("opacity", 0.5)
-                .attr("r", Victim_Circle_Size_Initial);
+                .attr("r", Victim_Circle_Size_Initial)
+                ;
             }
 
             //generate random number between -4 and 4
